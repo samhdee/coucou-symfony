@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$USER_HOME$/www/coucou-frontend/.idea/coucou-frontend.iml" filepath="$USER_HOME$/www/coucou-frontend/.idea/coucou-frontend.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/coucou-symfony.iml" filepath="$PROJECT_DIR$/.idea/coucou-symfony.iml" />
     </modules>
   </component>

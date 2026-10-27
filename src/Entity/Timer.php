@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Enum\TimerStatus;
+use App\Enum\TimerType;
 use App\Repository\TimerRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -22,48 +23,32 @@ class Timer
     private ?int $remainingAtPause = null;
 
     #[ORM\Column(nullable: true)]
-    private ?\DateTime $endsAt = null;
+    private ?\DateTimeImmutable $endsAt = null;
 
     #[ORM\Column(enumType: TimerStatus::class)]
     private ?TimerStatus $status = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $label = null;
-
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
-    public function __construct(string $label, int $value)
+    #[ORM\Column(enumType: TimerType::class)]
+    private ?TimerType $type = null;
+
+    public function __construct(TimerType $type, int $value, ?TimerStatus $status = null)
     {
-        $this->label = $label;
+        $now = new \DateTimeImmutable();
         $this->value = $value;
         $this->remainingAtPause = $value;
+        $this->type = $type;
+        $this->status = $status ?? TimerStatus::Running;
+        $this->endsAt = $status === TimerStatus::Running ? $now->add(new \DateInterval("PT{$value}S")) : null;
         $this->createdAt = new \DateTimeImmutable();
     }
 
-    public function start(\DateTime $now): void
+    public function getRemainingSeconds(): int
     {
-        if ($this->status !== TimerStatus::Paused) {
-            throw new \LogicException('Le timer ne peut être démarré que depuis l\'état pause.');
-        }
+        $now = new \DateTimeImmutable();
 
-        $this->endsAt = $now->modify(sprintf('+%d seconds', $this->remainingAtPause));
-        $this->status = TimerStatus::Running;
-    }
-
-    public function pause(\DateTimeImmutable $now): void
-    {
-        if ($this->status !== TimerStatus::Running) {
-            throw new \LogicException('Seul un timer en cours peut être mis en pause.');
-        }
-
-        $this->remainingAtPause = max(0, $this->endsAt->getTimestamp() - $now->getTimestamp());
-        $this->endsAt = null;
-        $this->status = TimerStatus::Paused;
-    }
-
-    public function getRemainingSeconds(\DateTimeImmutable $now): int
-    {
         return match ($this->status) {
             TimerStatus::Running => max(0, $this->endsAt->getTimestamp() - $now->getTimestamp()),
             TimerStatus::Paused => $this->remainingAtPause,
@@ -100,12 +85,12 @@ class Timer
         return $this;
     }
 
-    public function getEndsAt(): ?\DateTime
+    public function getEndsAt(): ?\DateTimeImmutable
     {
         return $this->endsAt;
     }
 
-    public function setEndsAt(?\DateTime $endsAt): static
+    public function setEndsAt(?\DateTimeImmutable $endsAt): static
     {
         $this->endsAt = $endsAt;
 
@@ -124,18 +109,6 @@ class Timer
         return $this;
     }
 
-    public function getLabel(): ?string
-    {
-        return $this->label;
-    }
-
-    public function setLabel(string $label): static
-    {
-        $this->label = $label;
-
-        return $this;
-    }
-
     public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->createdAt;
@@ -144,6 +117,18 @@ class Timer
     public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    public function getType(): ?TimerType
+    {
+        return $this->type;
+    }
+
+    public function setType(TimerType $type): static
+    {
+        $this->type = $type;
 
         return $this;
     }

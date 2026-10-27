@@ -16,28 +16,30 @@ class TimersPresetRepository extends ServiceEntityRepository
         parent::__construct($registry, TimersPreset::class);
     }
 
-//    /**
-//     * @return TimersPreset[] Returns an array of TimersPreset objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('t')
-//            ->andWhere('t.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('t.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
+    /**
+     * @return TimersPreset[] Returns an array of TimersPreset objects
+     */
+    public function getAllActive(): array
+    {
+        return $this->createQueryBuilder('tp')
+            ->select('tp.id', 'tp.value', 'tp.type')
+            ->andWhere('tp.active = :active')
+            ->setParameter('active', true)
+            ->orderBy('tp.value')
+            ->getQuery()
+            ->getResult();
+    }
 
-//    public function findOneBySomeField($value): ?TimersPreset
-//    {
-//        return $this->createQueryBuilder('t')
-//            ->andWhere('t.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+    /**
+     * @return TimersPreset[] Returns an array of TimersPreset objects
+     */
+    public function getByValue(int $value): array
+    {
+        return $this->createQueryBuilder('tp')
+            ->select('tp.id', 'tp.value')
+            ->andWhere('tp.value = :value')
+            ->setParameter('value', $value)
+            ->getQuery()
+            ->getResult();
+    }
 }

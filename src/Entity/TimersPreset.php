@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Enum\TimerPresetAdded;
+use App\Enum\TimerType;
 use App\Repository\TimersPresetRepository;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -21,10 +22,22 @@ class TimersPreset
     private ?bool $active = null;
 
     #[ORM\Column(enumType: TimerPresetAdded::class)]
-    private ?TimerPresetAdded $added_by = null;
+    private ?TimerPresetAdded $addedBy = null;
 
     #[ORM\Column]
-    private ?\DateTime $created_at = null;
+    private ?\DateTimeImmutable $createdAt = null;
+
+    #[ORM\Column(enumType: TimerType::class)]
+    private ?TimerType $type = null;
+
+    public function __construct(int $value, TimerType $type, TimerPresetAdded $addedBy)
+    {
+        $this->value = $value;
+        $this->type = $type;
+        $this->addedBy = $addedBy;
+        $this->active = 1;
+        $this->createdAt = new \DateTimeImmutable();
+    }
 
     public function getId(): ?int
     {
@@ -75,6 +88,18 @@ class TimersPreset
     public function setCreatedAt(\DateTime $created_at): static
     {
         $this->created_at = $created_at;
+
+        return $this;
+    }
+
+    public function getType(): ?TimerType
+    {
+        return $this->type;
+    }
+
+    public function setType(TimerType $type): static
+    {
+        $this->type = $type;
 
         return $this;
     }
