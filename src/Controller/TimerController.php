@@ -29,6 +29,14 @@ final class TimerController extends AbstractController
 
         return $this->json($timers_preset, Response::HTTP_CREATED);
     }
+
+    /**
+     * Crée le timer
+     * @param TimerInput $input
+     * @param EntityManagerInterface $em
+     * @param TimersPresetRepository $presetRepo
+     * @return JsonResponse
+     */
     #[Route('/timer', methods: ['POST'])]
     public function create(#[MapRequestPayload] TimerInput $input, EntityManagerInterface $em, TimersPresetRepository $presetRepo): JsonResponse
     {
@@ -98,7 +106,7 @@ final class TimerController extends AbstractController
      * @param HubInterface $hub
      * @return JsonResponse
      */
-    #[Route('/timer/{id}/pause')]
+    #[Route('/timer/{id}/pause', methods: ['PATCH'])]
     public function pause(Timer $timer, EntityManagerInterface $em, HubInterface $hub): JsonResponse
     {
         if ($timer->getStatus() !== TimerStatus::Running) {
@@ -112,12 +120,14 @@ final class TimerController extends AbstractController
         $timer->setStatus(TimerStatus::Paused);
         $em->flush();
 
-        // Envoie d’une notif
+        // Envoi d’une notif
         $hub->publish(new Update(
-            "timers/{$timer->getId()}",
+            "timer/{$timer->getId()}",
             json_encode([
                 'status' => $timer->getStatus()->value,
                 'remainingSeconds' => $timer->getRemainingSeconds(),
+                'remainingAtPause' => $timer->getRemainingAtPause(),
+                'endsAt' => $timer->getEndsAt(),
             ]),
         ));
 
@@ -132,7 +142,7 @@ final class TimerController extends AbstractController
      * @return JsonResponse
      * @throws DateMalformedStringException
      */
-    #[Route('/timer/{id}/reset')]
+    #[Route('/timer/{id}/reset', methods: ['PATCH'])]
     public function reset(Timer $timer, EntityManagerInterface $em, HubInterface $hub): JsonResponse
     {
         // Réinitialise le timer
@@ -143,10 +153,12 @@ final class TimerController extends AbstractController
 
         // Envoie une notif à Mercure
         $hub->publish(new Update(
-            "timers/{$timer->getId()}",
+            "timer/{$timer->getId()}",
             json_encode([
                 'status' => $timer->getStatus()->value,
                 'remainingSeconds' => $timer->getRemainingSeconds(),
+                'remainingAtPause' => $timer->getRemainingAtPause(),
+                'endsAt' => $timer->getEndsAt(),
             ]),
         ));
 
