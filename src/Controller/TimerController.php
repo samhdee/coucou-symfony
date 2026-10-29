@@ -56,6 +56,17 @@ final class TimerController extends AbstractController
     }
 
     /**
+     * Récupère le timer
+     * @param Timer $timer
+     * @return JsonResponse
+     */
+    #[Route('/timer/{id}')]
+    public function get(Timer $timer): JsonResponse
+    {
+        return $this->json($timer);
+    }
+
+    /**
      * Démarre le timer
      * @param Timer $timer
      * @param EntityManagerInterface $em
@@ -78,24 +89,15 @@ final class TimerController extends AbstractController
 
         // Envoie une notif
         $hub->publish(new Update(
-            "timers/{$timer->getId()}",
+            "timer/{$timer->getId()}",
             json_encode([
                 'status' => $timer->getStatus()->value,
                 'remainingSeconds' => $timer->getRemainingSeconds(),
+                'remainingAtPause' => $timer->getRemainingAtPause(),
+                'endsAt' => $timer->getEndsAt()->setTimezone(new \DateTimeZone('Europe/Paris'))->format('Y-m-d H:i:s.u'),
             ]),
         ));
 
-        return $this->json($timer);
-    }
-
-    /**
-     * Récupère le timer
-     * @param Timer $timer
-     * @return JsonResponse
-     */
-    #[Route('/timer/{id}')]
-    public function get(Timer $timer): JsonResponse
-    {
         return $this->json($timer);
     }
 
@@ -127,7 +129,7 @@ final class TimerController extends AbstractController
                 'status' => $timer->getStatus()->value,
                 'remainingSeconds' => $timer->getRemainingSeconds(),
                 'remainingAtPause' => $timer->getRemainingAtPause(),
-                'endsAt' => $timer->getEndsAt(),
+                'endsAt' => null,
             ]),
         ));
 
