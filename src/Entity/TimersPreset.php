@@ -30,12 +30,16 @@ class TimersPreset
     #[ORM\Column(enumType: TimerType::class)]
     private ?TimerType $type = null;
 
-    public function __construct(int $value, TimerType $type, TimerPresetAdded $addedBy)
+    #[ORM\Column(nullable: true)]
+    private ?int $count = null;
+
+    public function __construct(int $value, TimerType $type)
     {
         $this->value = $value;
         $this->type = $type;
-        $this->addedBy = $addedBy;
+        $this->addedBy = TimerPresetAdded::NewTimer;
         $this->active = 1;
+        $this->count = 1;
         $this->createdAt = new \DateTimeImmutable();
     }
 
@@ -100,6 +104,18 @@ class TimersPreset
     public function setType(TimerType $type): static
     {
         $this->type = $type;
+
+        return $this;
+    }
+
+    public function getCount(): ?int
+    {
+        return $this->count;
+    }
+
+    public function setCount(int $count): static
+    {
+        $this->count = $count;
 
         return $this;
     }

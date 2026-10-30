@@ -26,7 +26,7 @@ class TimersPresetRepository extends ServiceEntityRepository
             ->select('tp.id', 'tp.value', 'tp.type')
             ->andWhere('tp.active = :active')
             ->setParameter('active', true)
-            ->orderBy('tp.value')
+            ->orderBy('tp.count', 'desc')
             ->getQuery()
             ->getResult();
     }
@@ -34,7 +34,7 @@ class TimersPresetRepository extends ServiceEntityRepository
     /**
      * @return TimersPreset[] Returns an array of TimersPreset objects
      */
-    public function getByValue(int $value, TimerType $type): array
+    public function getByValue(int $value, TimerType $type): array|null
     {
         return $this->createQueryBuilder('tp')
             ->select('tp.id', 'tp.value')
@@ -43,6 +43,17 @@ class TimersPresetRepository extends ServiceEntityRepository
             ->andWhere('tp.type = :type')
             ->setParameter('type', $type)
             ->getQuery()
-            ->getResult();
+            ->getOneOrNullResult();
+    }
+
+    public function incrementCount(int $id): int
+    {
+        return $this->createQueryBuilder('tp')
+            ->update()
+            ->set('tp.count', 'tp.count + 1')
+            ->where('tp.id = :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->execute();
     }
 }

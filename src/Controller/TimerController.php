@@ -57,6 +57,8 @@ final class TimerController extends AbstractController
             $timers_preset = new TimersPreset($input->value, $input->type, TimerPresetAdded::NewTimer);
             $em->persist($timers_preset);
             $em->flush();
+        } else {
+            $presetRepo->incrementCount($existing_presets['id']);
         }
 
         return $this->json($timer, Response::HTTP_CREATED);
