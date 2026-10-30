@@ -19,6 +19,7 @@ use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 final class TimerController extends AbstractController
 {
@@ -38,9 +39,14 @@ final class TimerController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/timer', methods: ['POST'])]
-    public function create(#[MapRequestPayload] TimerInput $input, EntityManagerInterface $em, TimersPresetRepository $presetRepo): JsonResponse
+    public function create(
+        #[MapRequestPayload] TimerInput $input,
+        #[CurrentUser] $user,
+        EntityManagerInterface $em,
+        TimersPresetRepository $presetRepo
+    ): JsonResponse
     {
-        $timer = new Timer($input->type, $input->value, $input->status);
+        $timer = new Timer($input->type, $input->value, $input->status, $user);
         $em->persist($timer);
         $em->flush();
 

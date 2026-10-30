@@ -34,7 +34,11 @@ class Timer
     #[ORM\Column(enumType: TimerType::class)]
     private ?TimerType $type = null;
 
-    public function __construct(TimerType $type, int $value, ?TimerStatus $status = null)
+    #[ORM\ManyToOne(inversedBy: 'timers')]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?User $User = null;
+
+    public function __construct(TimerType $type, int $value, ?TimerStatus $status = null, ?User $user = null)
     {
         $now = new \DateTimeImmutable();
         $this->value = $value;
@@ -129,6 +133,18 @@ class Timer
     public function setType(TimerType $type): static
     {
         $this->type = $type;
+
+        return $this;
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->User;
+    }
+
+    public function setUser(?User $User): static
+    {
+        $this->User = $User;
 
         return $this;
     }
