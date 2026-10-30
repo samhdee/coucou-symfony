@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\TimersPreset;
+use App\Enum\TimerType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -33,12 +34,14 @@ class TimersPresetRepository extends ServiceEntityRepository
     /**
      * @return TimersPreset[] Returns an array of TimersPreset objects
      */
-    public function getByValue(int $value): array
+    public function getByValue(int $value, TimerType $type): array
     {
         return $this->createQueryBuilder('tp')
             ->select('tp.id', 'tp.value')
             ->andWhere('tp.value = :value')
             ->setParameter('value', $value)
+            ->andWhere('tp.type = :type')
+            ->setParameter('type', $type)
             ->getQuery()
             ->getResult();
     }

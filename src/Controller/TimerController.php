@@ -34,6 +34,7 @@ final class TimerController extends AbstractController
     /**
      * Crée le timer
      * @param TimerInput $input
+     * @param $user
      * @param EntityManagerInterface $em
      * @param TimersPresetRepository $presetRepo
      * @return JsonResponse
@@ -50,7 +51,7 @@ final class TimerController extends AbstractController
         $em->persist($timer);
         $em->flush();
 
-        $existing_presets = $presetRepo->getByValue($input->value);
+        $existing_presets = $presetRepo->getByValue($input->value, $input->type);
 
         if (empty($existing_presets)) {
             $timers_preset = new TimersPreset($input->value, $input->type, TimerPresetAdded::NewTimer);
