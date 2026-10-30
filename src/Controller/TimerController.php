@@ -3,11 +3,11 @@
 namespace App\Controller;
 
 use App\Dto\TimerInput;
+use App\Entity\SevenByNine;
 use App\Entity\Timer;
 use App\Entity\TimersPreset;
 use App\Enum\TimerPresetAdded;
 use App\Enum\TimerStatus;
-use App\Enum\TimerType;
 use App\Repository\TimersPresetRepository;
 use DateMalformedStringException;
 use DateTimeImmutable;
@@ -103,11 +103,13 @@ final class TimerController extends AbstractController
                 'status' => $timer->getStatus()->value,
                 'remainingSeconds' => $timer->getRemainingSeconds(),
                 'remainingAtPause' => $timer->getRemainingAtPause(),
-                'endsAt' => $timer->getEndsAt()->setTimezone(new \DateTimeZone('Europe/Paris'))->format('Y-m-d H:i:s.u'),
+                'endsAt' => $timer->getEndsAt()
+                    ->setTimezone(new \DateTimeZone('Europe/Paris'))
+                    ->format('Y-m-d H:i:s.u'),
             ]),
         ));
 
-        return $this->json($timer);
+        return $this->json($timer, context: ['groups' => 'timer:read']);
     }
 
     /**
@@ -142,7 +144,7 @@ final class TimerController extends AbstractController
             ]),
         ));
 
-        return $this->json($timer);
+        return $this->json($timer, context: ['groups' => 'timer:read']);
     }
 
     /**
