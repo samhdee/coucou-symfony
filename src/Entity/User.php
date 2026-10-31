@@ -37,9 +37,16 @@ class User implements UserInterface
     #[ORM\OneToMany(targetEntity: Timer::class, mappedBy: 'User')]
     private Collection $timers;
 
+    /**
+     * @var Collection<int, SevenByNine>
+     */
+    #[ORM\OneToMany(targetEntity: SevenByNine::class, mappedBy: 'createdBy')]
+    private Collection $sevenByNines;
+
     public function __construct()
     {
         $this->timers = new ArrayCollection();
+        $this->sevenByNines = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -142,6 +149,36 @@ class User implements UserInterface
             // set the owning side to null (unless already changed)
             if ($timer->getUser() === $this) {
                 $timer->setUser(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, SevenByNine>
+     */
+    public function getSevenByNines(): Collection
+    {
+        return $this->sevenByNines;
+    }
+
+    public function addSevenByNine(SevenByNine $sevenByNine): static
+    {
+        if (!$this->sevenByNines->contains($sevenByNine)) {
+            $this->sevenByNines->add($sevenByNine);
+            $sevenByNine->setCreatedBy($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSevenByNine(SevenByNine $sevenByNine): static
+    {
+        if ($this->sevenByNines->removeElement($sevenByNine)) {
+            // set the owning side to null (unless already changed)
+            if ($sevenByNine->getCreatedBy() === $this) {
+                $sevenByNine->setCreatedBy(null);
             }
         }
 
