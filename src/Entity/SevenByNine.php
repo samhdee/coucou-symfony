@@ -36,18 +36,23 @@ class SevenByNine
     #[Groups(['seven_by_nine:read'])]
     private ?TimerType $lastTimerType = null;
 
+    #[ORM\Column]
+    #[Groups(['seven_by_nine:read'])]
+    private array $drawnValues = [];
+
     #[ORM\ManyToOne(inversedBy: 'sevenByNines')]
     private ?User $createdBy = null;
 
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
-    public function __construct(Timer $timer, ?User $user)
+    public function __construct(Timer $timer, int $firstDraw, ?User $user)
     {
         $this->countTasks = 1;
         $this->countPauses = 0;
         $this->currentTimer = $timer;
         $this->lastTimerType = TimerType::Task;
+        $this->drawnValues = [$firstDraw];
         $this->createdBy = !empty($user) ? $user : null;
         $this->createdAt = new \DateTimeImmutable();
     }
@@ -151,6 +156,18 @@ class SevenByNine
     public function setLastTimerType(TimerType $lastTimerType): static
     {
         $this->lastTimerType = $lastTimerType;
+
+        return $this;
+    }
+
+    public function getDrawnValues(): array
+    {
+        return $this->drawnValues;
+    }
+
+    public function setDrawnValues(array $drawnValues): static
+    {
+        $this->drawnValues = $drawnValues;
 
         return $this;
     }

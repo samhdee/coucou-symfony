@@ -32,11 +32,11 @@ final class SevenByNineController extends AbstractController
         $em->persist($timer);
 
         // Création du 7x9
-        $seven_by_nine = new SevenByNine($timer, $user);
+        $seven_by_nine = new SevenByNine($timer, rand(1, SevenByNine::TIMER_TASK_MAX), $user);
         $em->persist($seven_by_nine);
 
         $em->flush();
-        return $this->json($seven_by_nine, Response::HTTP_CREATED);
+        return $this->json($seven_by_nine, Response::HTTP_CREATED, context: ['groups' => 'seven_by_nine:read']);
     }
 
     /**
@@ -70,7 +70,9 @@ final class SevenByNineController extends AbstractController
             return $this->json(['result' => 'done'], Response::HTTP_FORBIDDEN);
         }
 
-        $new_timer_type = $seven_by_nine->getLastTimerType() === TimerType::Task ? TimerType::Pause : TimerType::Task;
+        $new_timer_type = $seven_by_nine->getLastTimerType() === TimerType::Task
+            ? TimerType::Pause
+            : TimerType::Task;
 
         // Crée le nouveau timer
         $timer = new Timer(
@@ -85,11 +87,22 @@ final class SevenByNineController extends AbstractController
 
         if ($new_timer_type === TimerType::Task) {
             $seven_by_nine->incrementTaskCount();
+
+            // Tire au sort le prochain numéro
+            $drawn_values = $seven_by_nine->getDrawnValues();
+            $new_draw = rand(1, SevenByNine::TIMER_TASK_MAX);
+
+            while (in_array($new_draw, $drawn_values)) {
+                $new_draw = rand(1, SevenByNine::TIMER_TASK_MAX);
+            }
+
+            $drawn_values[] = $new_draw;
+            $seven_by_nine->setDrawnValues($drawn_values);
         } else {
             $seven_by_nine->incrementPauseCount();
         }
 
         $em->flush();
-        return $this->json($seven_by_nine, Response::HTTP_CREATED);
+        return $this->json($seven_by_nine, Response::HTTP_CREATED, context: ['groups' => 'seven_by_nine:read']);
     }
 }
