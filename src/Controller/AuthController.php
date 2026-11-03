@@ -6,6 +6,8 @@ use App\Entity\User;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -13,8 +15,14 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 final class AuthController extends AbstractController
 {
     #[Route('/auth/discord', name: 'connect_discord_start')]
-    public function connect(ClientRegistry $clientRegistry): Response
+    public function connect(Request $request, ClientRegistry $clientRegistry): Response
     {
+        $redir = $request->query->get('redir');
+
+        if (!empty($redir) && str_starts_with($redir, '/') && !str_starts_with($redir, '//')) {
+            $request->getSession()->set('oauth_redir', $redir);
+        }
+
         return $clientRegistry->getClient('discord')->redirect(['identify', 'email'], []);
     }
 

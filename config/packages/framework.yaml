@@ -6,9 +6,8 @@ framework:
     session:
         cookie_secure: auto
         cookie_samesite: lax
-
-    #esi: true
-    #fragments: true
+        cookie_lifetime: '%env(COOKIE_LIFETIME)%'   # Durée de vie du cookie côté navigateur (30 jours)
+        gc_maxlifetime: '%env(COOKIE_LIFETIME)%'
 
 when@test:
     framework:

@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Dto\TimerInput;
+use App\Dto\TimersPresetsInput;
 use App\Entity\SevenByNine;
 use App\Entity\Timer;
 use App\Entity\TimersPreset;
@@ -23,10 +24,20 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 final class TimerController extends AbstractController
 {
-    #[Route('/timers_preset')]
-    public function getTimersPreset(TimersPresetRepository $presetRepository): JsonResponse
+    #[Route('/timers_preset', methods: ['GET'])]
+    public function getTimersPreset(TimersPresetRepository $presetRepository,): JsonResponse
     {
         $timers_preset = $presetRepository->getAllActive();
+
+        return $this->json($timers_preset, Response::HTTP_CREATED);
+    }
+    #[Route('/timers_preset', methods: ['POST'])]
+    public function getTimersPresetFromType(
+        TimersPresetRepository $presetRepository,
+        #[MapRequestPayload] TimersPresetsInput $input,
+    ): JsonResponse
+    {
+        $timers_preset = $presetRepository->getAllActive($input->type);
 
         return $this->json($timers_preset, Response::HTTP_CREATED);
     }

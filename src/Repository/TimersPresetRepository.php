@@ -20,13 +20,19 @@ class TimersPresetRepository extends ServiceEntityRepository
     /**
      * @return TimersPreset[] Returns an array of TimersPreset objects
      */
-    public function getAllActive(): array
+    public function getAllActive(?TimerType $type = null): array
     {
-        return $this->createQueryBuilder('tp')
+        $query = $this->createQueryBuilder('tp')
             ->select('tp.id', 'tp.value', 'tp.type')
             ->andWhere('tp.active = :active')
-            ->setParameter('active', true)
-            ->orderBy('tp.count', 'desc')
+            ->setParameter('active', true);
+
+        if (!empty($type)) {
+            $query->andWhere('tp.type = :type')
+                ->setParameter('type', $type);
+        }
+
+        return $query->orderBy('tp.count', 'desc')
             ->getQuery()
             ->getResult();
     }

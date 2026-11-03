@@ -64,7 +64,10 @@ class DiscordAuthenticator extends OAuth2Authenticator
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
-        return new RedirectResponse($_ENV['FRONTEND_URL']);
+        $oauth_redir = $request->getSession()->remove('oauth_redir');
+        $redirect = !empty($oauth_redir) ? $_ENV['FRONTEND_URL'] . $oauth_redir : $_ENV['FRONTEND_URL'];
+
+        return new RedirectResponse($redirect);
     }
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
