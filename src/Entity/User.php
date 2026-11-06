@@ -43,10 +43,17 @@ class User implements UserInterface
     #[ORM\OneToMany(targetEntity: SevenByNine::class, mappedBy: 'createdBy')]
     private Collection $sevenByNines;
 
+    /**
+     * @var Collection<int, Timer>
+     */
+    #[ORM\ManyToMany(targetEntity: Timer::class, inversedBy: 'attendants')]
+    private Collection $attendedTimers;
+
     public function __construct()
     {
         $this->timers = new ArrayCollection();
         $this->sevenByNines = new ArrayCollection();
+        $this->attendedTimers = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -181,6 +188,30 @@ class User implements UserInterface
                 $sevenByNine->setCreatedBy(null);
             }
         }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Timer>
+     */
+    public function getAttendedTimers(): Collection
+    {
+        return $this->attendedTimers;
+    }
+
+    public function addAttendedTimer(Timer $attendedTimer): static
+    {
+        if (!$this->attendedTimers->contains($attendedTimer)) {
+            $this->attendedTimers->add($attendedTimer);
+        }
+
+        return $this;
+    }
+
+    public function removeAttendedTimer(Timer $attendedTimer): static
+    {
+        $this->attendedTimers->removeElement($attendedTimer);
 
         return $this;
     }

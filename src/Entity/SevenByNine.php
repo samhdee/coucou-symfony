@@ -27,16 +27,16 @@ class SevenByNine
     #[Groups(['seven_by_nine:read'])]
     private ?int $countPauses = null;
 
-    #[Groups(['seven_by_nine:read'])]
     #[ORM\ManyToOne(inversedBy: 'sevenByNines')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['seven_by_nine:read', 'user:read'])]
     private ?Timer $currentTimer = null;
 
     #[ORM\Column(enumType: TimerType::class)]
     private ?TimerType $lastTimerType = null;
 
     #[ORM\Column]
-    #[Groups(['seven_by_nine:read'])]
+    #[Groups(['seven_by_nine:read', 'user:read'])]
     private array $drawnValues = [];
 
     // Numéro de séquence du timer courant (sert au verrouillage optimiste)
@@ -50,6 +50,8 @@ class SevenByNine
     private int $version = 1;
 
     #[ORM\ManyToOne(inversedBy: 'sevenByNines')]
+    #[ORM\JoinColumn(nullable: true)]
+    #[Groups(['seven_by_nine:read', 'user:read'])]
     private ?User $createdBy = null;
 
     #[ORM\Column]

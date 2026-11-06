@@ -7,12 +7,14 @@ use App\Dto\TimersPresetsInput;
 use App\Entity\SevenByNine;
 use App\Entity\Timer;
 use App\Entity\TimersPreset;
+use App\Entity\User;
 use App\Enum\TimerPresetAdded;
 use App\Enum\TimerStatus;
 use App\Repository\TimersPresetRepository;
 use DateMalformedStringException;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -53,12 +55,17 @@ final class TimerController extends AbstractController
     #[Route('/timer', methods: ['POST'])]
     public function create(
         #[MapRequestPayload] TimerInput $input,
-        #[CurrentUser] $user,
+        #[CurrentUser] ?User $user,
         EntityManagerInterface $em,
         TimersPresetRepository $presetRepo
     ): JsonResponse
     {
-        $timer = new Timer($input->type, $input->value, $input->status, $user);
+        $timer = new Timer($input->type, $input->value, $input->status);
+
+        if (!empty($user)) {
+            $timer->setUser($user);
+        }
+
         $em->persist($timer);
         $em->flush();
 
@@ -72,7 +79,7 @@ final class TimerController extends AbstractController
             $presetRepo->incrementCount($existing_presets['id']);
         }
 
-        return $this->json($timer, Response::HTTP_CREATED);
+        return $this->json($timer, Response::HTTP_CREATED, context: ['groups' => 'timer:read']);
     }
 
     /**
@@ -83,7 +90,7 @@ final class TimerController extends AbstractController
     #[Route('/timer/{id}')]
     public function get(Timer $timer): JsonResponse
     {
-        return $this->json($timer);
+        return $this->json($timer, context: ['groups' => 'timer:read']);
     }
 
     /**

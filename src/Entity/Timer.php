@@ -42,6 +42,7 @@ class Timer
 
     #[ORM\ManyToOne(inversedBy: 'timers')]
     #[ORM\JoinColumn(nullable: true)]
+    #[Groups(['timer:read'])]
     private ?User $User = null;
 
     /**
@@ -57,6 +58,12 @@ class Timer
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
+    /**
+     * @var Collection<int, User>
+     */
+    #[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'attendedTimers')]
+    private Collection $attendants;
+
     public function __construct(TimerType $type, int $value, ?TimerStatus $status = null, ?int $position = null)
     {
         $now = new \DateTimeImmutable();
@@ -68,6 +75,7 @@ class Timer
         $this->position = $position;
         $this->createdAt = new \DateTimeImmutable();
         $this->sevenByNines = new ArrayCollection();
+        $this->attendants = new ArrayCollection();
     }
 
     public function getRemainingSeconds(): int
@@ -208,6 +216,33 @@ class Timer
     public function setPosition(?int $position): static
     {
         $this->position = $position;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    public function getAttendants(): Collection
+    {
+        return $this->attendants;
+    }
+
+    public function addAttendant(User $attendant): static
+    {
+        if (!$this->attendants->contains($attendant)) {
+            $this->attendants->add($attendant);
+            $attendant->addAttendedTimer($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAttendant(User $attendant): static
+    {
+        if ($this->attendants->removeElement($attendant)) {
+            $attendant->removeAttendedTimer($this);
+        }
 
         return $this;
     }
