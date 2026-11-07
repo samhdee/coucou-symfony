@@ -17,31 +17,32 @@ class Timer
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['seven_by_nine:read', 'timer:read'])]
+    #[Groups(['seven_by_nine:read', 'timer:read', 'session:read'])]
     private ?int $id = null;
 
     #[ORM\Column(type: Types::SMALLINT)]
-    #[Groups(['seven_by_nine:read', 'timer:read'])]
+    #[Groups(['seven_by_nine:read', 'timer:read', 'session:read'])]
     private ?int $value = null;
 
     #[ORM\Column(type: Types::SMALLINT)]
-    #[Groups(['seven_by_nine:read', 'timer:read'])]
+    #[Groups(['seven_by_nine:read', 'timer:read', 'session:read'])]
     private ?int $remainingAtPause = null;
 
     #[ORM\Column(nullable: true)]
-    #[Groups(['seven_by_nine:read', 'timer:read'])]
+    #[Groups(['seven_by_nine:read', 'timer:read', 'session:read'])]
     private ?\DateTimeImmutable $endsAt = null;
 
     #[ORM\Column(enumType: TimerType::class)]
-    #[Groups(['seven_by_nine:read', 'timer:read'])]
+    #[Groups(['seven_by_nine:read', 'timer:read', 'session:read'])]
     private ?TimerType $type = null;
 
     #[ORM\Column(enumType: TimerStatus::class)]
-    #[Groups(['seven_by_nine:read', 'timer:read'])]
+    #[Groups(['seven_by_nine:read', 'timer:read', 'session:read'])]
     private ?TimerStatus $status = null;
 
     #[ORM\ManyToOne(inversedBy: 'timers')]
     #[ORM\JoinColumn(nullable: true)]
+    #[Groups(['timer:read', 'session:read'])]
     private ?User $User = null;
 
     /**
@@ -57,6 +58,19 @@ class Timer
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
+    /**
+     * @var Collection<int, User>
+     */
+    #[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'attendedTimers')]
+    #[Groups(['seven_by_nine:read', 'timer:read', 'session:read'])]
+    private Collection $attendants;
+
+    /**
+     * @var Collection<int, Session>
+     */
+    #[ORM\OneToMany(targetEntity: Session::class, mappedBy: 'currentTimer')]
+    private Collection $sessions;
+
     public function __construct(TimerType $type, int $value, ?TimerStatus $status = null, ?int $position = null)
     {
         $now = new \DateTimeImmutable();
@@ -68,6 +82,8 @@ class Timer
         $this->position = $position;
         $this->createdAt = new \DateTimeImmutable();
         $this->sevenByNines = new ArrayCollection();
+        $this->attendants = new ArrayCollection();
+        $this->sessions = new ArrayCollection();
     }
 
     public function getRemainingSeconds(): int
@@ -208,6 +224,63 @@ class Timer
     public function setPosition(?int $position): static
     {
         $this->position = $position;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    public function getAttendants(): Collection
+    {
+        return $this->attendants;
+    }
+
+    public function addAttendant(User $attendant): static
+    {
+        if (!$this->attendants->contains($attendant)) {
+            $this->attendants->add($attendant);
+            $attendant->addAttendedTimer($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAttendant(User $attendant): static
+    {
+        if ($this->attendants->removeElement($attendant)) {
+            $attendant->removeAttendedTimer($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Session>
+     */
+    public function getSessions(): Collection
+    {
+        return $this->sessions;
+    }
+
+    public function addSession(Session $session): static
+    {
+        if (!$this->sessions->contains($session)) {
+            $this->sessions->add($session);
+            $session->setCurrentTimer($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSession(Session $session): static
+    {
+        if ($this->sessions->removeElement($session)) {
+            // set the owning side to null (unless already changed)
+            if ($session->getCurrentTimer() === $this) {
+                $session->setCurrentTimer(null);
+            }
+        }
 
         return $this;
     }
