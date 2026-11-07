@@ -49,11 +49,18 @@ class User implements UserInterface
     #[ORM\ManyToMany(targetEntity: Timer::class, inversedBy: 'attendants')]
     private Collection $attendedTimers;
 
+    /**
+     * @var Collection<int, Session>
+     */
+    #[ORM\ManyToMany(targetEntity: Session::class, mappedBy: 'users')]
+    private Collection $sessions;
+
     public function __construct()
     {
         $this->timers = new ArrayCollection();
         $this->sevenByNines = new ArrayCollection();
         $this->attendedTimers = new ArrayCollection();
+        $this->sessions = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -212,6 +219,33 @@ class User implements UserInterface
     public function removeAttendedTimer(Timer $attendedTimer): static
     {
         $this->attendedTimers->removeElement($attendedTimer);
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Session>
+     */
+    public function getSessions(): Collection
+    {
+        return $this->sessions;
+    }
+
+    public function addSession(Session $session): static
+    {
+        if (!$this->sessions->contains($session)) {
+            $this->sessions->add($session);
+            $session->addUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSession(Session $session): static
+    {
+        if ($this->sessions->removeElement($session)) {
+            $session->removeUser($this);
+        }
 
         return $this;
     }
