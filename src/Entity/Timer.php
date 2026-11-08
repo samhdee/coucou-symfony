@@ -40,11 +40,6 @@ class Timer
     #[Groups(['seven_by_nine:read', 'timer:read', 'session:read'])]
     private ?TimerStatus $status = null;
 
-    #[ORM\ManyToOne(inversedBy: 'timers')]
-    #[ORM\JoinColumn(nullable: true)]
-    #[Groups(['timer:read', 'session:read'])]
-    private ?User $User = null;
-
     /**
      * @var Collection<int, SevenByNine>
      */

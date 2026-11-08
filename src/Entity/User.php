@@ -32,12 +32,6 @@ class User implements UserInterface
     private array $roles = [];
 
     /**
-     * @var Collection<int, Timer>
-     */
-    #[ORM\OneToMany(targetEntity: Timer::class, mappedBy: 'User')]
-    private Collection $timers;
-
-    /**
      * @var Collection<int, SevenByNine>
      */
     #[ORM\OneToMany(targetEntity: SevenByNine::class, mappedBy: 'createdBy')]
