@@ -7,10 +7,14 @@ use App\Entity\SevenByNine;
 use App\Entity\Timer;
 use App\Enum\TimerStatus;
 use App\Enum\TimerType;
+use App\Service\Mercure;
+use DateMalformedStringException;
+use DateTimeImmutable;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Doctrine\ORM\OptimisticLockException;
+use JsonException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -60,11 +64,13 @@ final class SevenByNineController extends AbstractController
      * @param UserInterface|null $user
      * @param EntityManagerInterface $em
      * @return JsonResponse
+     * @throws JsonException
      */
     #[Route('/seven-by-nine/{id}/next')]
     public function createNextTimer(
         #[MapRequestPayload] SevenByNineNextInput $input,
         SevenByNine            $seven_by_nine,
+        Mercure                $mercure,
         EntityManagerInterface $em,
     ): JsonResponse
     {
@@ -92,6 +98,9 @@ final class SevenByNineController extends AbstractController
             $seven_by_nine->getCurrentTimer()->getPosition() + 1,
         );
         $em->persist($timer);
+
+        // Envoie une notif
+        $mercure->sevenByNineUpdated($seven_by_nine, $timer);
 
         try {
             // Met à jour le 7x9
@@ -127,5 +136,60 @@ final class SevenByNineController extends AbstractController
         } catch (ORMException $e) {
             return $this->json(['result' => 'Timer not found'], Response::HTTP_NOT_FOUND);
         }
+    }
+
+    /**
+     * Démarre le timer
+     * @param SevenByNine $sevenByNine
+     * @param EntityManagerInterface $em
+     * @param Mercure $mercure
+     * @return JsonResponse
+     * @throws JsonException
+     * @throws DateMalformedStringException
+     */
+    #[Route('/seven-by-nine/{id}/start')]
+    public function start(SevenByNine $sevenByNine, EntityManagerInterface $em, Mercure $mercure): JsonResponse
+    {
+        $timer = $sevenByNine->getCurrentTimer();
+
+        if ($timer->getStatus() !== TimerStatus::Paused) {
+            throw new \LogicException('Le timer ne peut être démarré que depuis l\'état pause.');
+        }
+
+        // Démarrer le timer
+        $timer->start();
+        $em->flush();
+
+        // Envoie une notif
+        $mercure->sevenByNineUpdated($sevenByNine, $timer);
+
+        return $this->json($sevenByNine, context: ['groups' => 'seven_by_nine:read']);
+    }
+
+    /**
+     * Met le timer sur pause
+     * @param SevenByNine $sevenByNine
+     * @param EntityManagerInterface $em
+     * @param Mercure $mercure
+     * @return JsonResponse
+     * @throws JsonException
+     */
+    #[Route('/seven-by-nine/{id}/pause', methods: ['PATCH'])]
+    public function pause(SevenByNine $sevenByNine, EntityManagerInterface $em, Mercure $mercure): JsonResponse
+    {
+        $timer = $sevenByNine->getCurrentTimer();
+
+        if ($timer->getStatus() !== TimerStatus::Running) {
+            throw new \LogicException('Seul un timer en cours peut être mis en pause.');
+        }
+
+        // Met le timer sur pause
+        $timer->pause();
+        $em->flush();
+
+        // Envoi d’une notif
+        $mercure->sevenByNineUpdated($sevenByNine, $timer);
+
+        return $this->json($sevenByNine, context: ['groups' => 'seven_by_nine:read']);
     }
 }

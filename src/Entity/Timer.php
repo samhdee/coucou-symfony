@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Enum\TimerStatus;
 use App\Enum\TimerType;
 use App\Repository\TimerRepository;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -172,18 +173,6 @@ class Timer
         return $this;
     }
 
-    public function getUser(): ?User
-    {
-        return $this->User;
-    }
-
-    public function setUser(?User $User): static
-    {
-        $this->User = $User;
-
-        return $this;
-    }
-
     /**
      * @return Collection<int, SevenByNine>
      */
@@ -293,5 +282,23 @@ class Timer
         $this->session = $session;
 
         return $this;
+    }
+
+    /**
+     * @throws \DateMalformedStringException
+     */
+    public function start(): void
+    {
+        $now = new DateTimeImmutable();
+        $this->endsAt = $now->modify('+' . $this->remainingAtPause . ' seconds');
+        $this->status = TimerStatus::Running;
+    }
+
+    public function pause(): void
+    {
+        $now = new DateTimeImmutable();
+        $this->remainingAtPause = max(0, $this->endsAt->getTimestamp() - $now->getTimestamp());
+        $this->endsAt = null;
+        $this->status = TimerStatus::Paused;
     }
 }

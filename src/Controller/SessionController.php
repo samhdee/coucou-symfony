@@ -11,12 +11,14 @@ use App\Entity\User;
 use App\Enum\TimerPresetAdded;
 use App\Enum\TimerStatus;
 use App\Repository\TimersPresetRepository;
+use App\Service\Mercure;
 use DateMalformedStringException;
 use DateTimeImmutable;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Doctrine\ORM\OptimisticLockException;
+use JsonException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -89,7 +91,7 @@ final class SessionController extends AbstractController
      * @param Session $session
      * @param EntityManagerInterface $em
      * @param TimersPresetRepository $presetRepo
-     * @param HubInterface $hub
+     * @param Mercure $mercure
      * @return JsonResponse
      * @throws ORMException
      * @throws OptimisticLockException
@@ -100,7 +102,7 @@ final class SessionController extends AbstractController
         Session                $session,
         EntityManagerInterface $em,
         TimersPresetRepository $presetRepo,
-        HubInterface $hub
+        Mercure $mercure
     ): JsonResponse
     {
         // Quelqu'un a déjà avancé : on renvoie l'état réel sans rien créer
@@ -126,20 +128,7 @@ final class SessionController extends AbstractController
             }
 
             // Envoie une notif
-            $hub->publish(new Update(
-                "session/{$timer->getId()}",
-                json_encode([
-                    'id' => $session->getId(),
-                    'currentTimer' => [
-                        'status' => $timer->getStatus()->value,
-                        'remainingSeconds' => $timer->getRemainingSeconds(),
-                        'remainingAtPause' => $timer->getRemainingAtPause(),
-                        'endsAt' => $timer->getEndsAt()
-                            ->setTimezone(new \DateTimeZone('Europe/Paris'))
-                            ->format('Y-m-d H:i:s.u'),
-                    ]
-                ]),
-            ));
+            $mercure->sessionUpdated('session', $session->getId(), $timer);
 
             return $this->json($session, Response::HTTP_CREATED, context: ['groups' => 'session:read']);
         } catch (OptimisticLockException|UniqueConstraintViolationException) {
@@ -150,6 +139,8 @@ final class SessionController extends AbstractController
             return $this->json($session, context: ['groups' => 'session:read']);
         } catch (ORMException $e) {
             return $this->json(['result' => 'Session not found'], Response::HTTP_NOT_FOUND);
+        } catch (JsonException $e) {
+            return $this->json(['result' => 'Session not updated'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
     }
 
@@ -157,12 +148,13 @@ final class SessionController extends AbstractController
      * Démarre le timer
      * @param Session $session
      * @param EntityManagerInterface $em
-     * @param HubInterface $hub
+     * @param Mercure $mercure
      * @return JsonResponse
      * @throws DateMalformedStringException
+     * @throws JsonException
      */
     #[Route('/session/{id}/start')]
-    public function start(Session $session, EntityManagerInterface $em, HubInterface $hub): JsonResponse
+    public function start(Session $session, EntityManagerInterface $em, Mercure $mercure): JsonResponse
     {
         $timer = $session->getCurrentTimer();
 
@@ -177,20 +169,7 @@ final class SessionController extends AbstractController
         $em->flush();
 
         // Envoie une notif
-        $hub->publish(new Update(
-            "session/{$session->getId()}",
-            json_encode([
-                'id' => $session->getId(),
-                'currentTimer' => [
-                    'status' => $timer->getStatus()->value,
-                    'remainingSeconds' => $timer->getRemainingSeconds(),
-                    'remainingAtPause' => $timer->getRemainingAtPause(),
-                    'endsAt' => $timer->getEndsAt()
-                        ->setTimezone(new \DateTimeZone('Europe/Paris'))
-                        ->format('Y-m-d H:i:s.u'),
-                ]
-            ]),
-        ));
+        $mercure->sessionUpdated('session', $session->getId(), $timer);
 
         return $this->json($session, context: ['groups' => 'session:read']);
     }
@@ -199,11 +178,12 @@ final class SessionController extends AbstractController
      * Met le timer sur pause
      * @param Session $session
      * @param EntityManagerInterface $em
-     * @param HubInterface $hub
+     * @param Mercure $mercure
      * @return JsonResponse
+     * @throws JsonException
      */
     #[Route('/session/{id}/pause', methods: ['PATCH'])]
-    public function pause(Session $session, EntityManagerInterface $em, HubInterface $hub): JsonResponse
+    public function pause(Session $session, EntityManagerInterface $em, Mercure $mercure): JsonResponse
     {
         $timer = $session->getCurrentTimer();
 
@@ -219,18 +199,7 @@ final class SessionController extends AbstractController
         $em->flush();
 
         // Envoi d’une notif
-        $hub->publish(new Update(
-            "session/{$session->getId()}",
-            json_encode([
-                'id' => $session->getId(),
-                'currentTimer' => [
-                    'status' => $timer->getStatus()->value,
-                    'remainingSeconds' => $timer->getRemainingSeconds(),
-                    'remainingAtPause' => $timer->getRemainingAtPause(),
-                    'endsAt' => null,
-                ]
-            ]),
-        ));
+        $mercure->sessionUpdated('session', $session->getId(), $timer);
 
         return $this->json($session, context: ['groups' => 'session:read']);
     }
