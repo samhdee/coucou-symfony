@@ -128,7 +128,7 @@ final class SessionController extends AbstractController
             }
 
             // Envoie une notif
-            $mercure->sessionUpdated($session->getId(), $timer);
+            $mercure->sessionUpdated($session);
 
             return $this->json($session, Response::HTTP_CREATED, context: ['groups' => 'session:read']);
         } catch (OptimisticLockException|UniqueConstraintViolationException) {
@@ -139,7 +139,7 @@ final class SessionController extends AbstractController
             return $this->json($session, context: ['groups' => 'session:read']);
         } catch (ORMException $e) {
             return $this->json(['result' => 'Session not found'], Response::HTTP_NOT_FOUND);
-        } catch (JsonException $e) {
+        } catch (JsonException|ExceptionInterface) {
             return $this->json(['result' => 'Session not updated'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
     }
@@ -152,6 +152,7 @@ final class SessionController extends AbstractController
      * @return JsonResponse
      * @throws DateMalformedStringException
      * @throws JsonException
+     * @throws ExceptionInterface
      */
     #[Route('/session/{id}/start')]
     public function start(Session $session, EntityManagerInterface $em, Mercure $mercure): JsonResponse
@@ -169,7 +170,7 @@ final class SessionController extends AbstractController
         $em->flush();
 
         // Envoie une notif
-        $mercure->sessionUpdated($session->getId(), $timer);
+        $mercure->sessionUpdated($session);
 
         return $this->json($session, context: ['groups' => 'session:read']);
     }
@@ -199,7 +200,7 @@ final class SessionController extends AbstractController
         $em->flush();
 
         // Envoi d’une notif
-        $mercure->sessionUpdated($session->getId(), $timer);
+        $mercure->sessionUpdated($session);
 
         return $this->json($session, context: ['groups' => 'session:read']);
     }

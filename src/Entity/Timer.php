@@ -5,12 +5,14 @@ namespace App\Entity;
 use App\Enum\TimerStatus;
 use App\Enum\TimerType;
 use App\Repository\TimerRepository;
+use DateMalformedStringException;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\Serializer\Attribute\SerializedName;
 
 #[ORM\Entity(repositoryClass: TimerRepository::class)]
 class Timer
@@ -30,8 +32,7 @@ class Timer
     private ?int $remainingAtPause = null;
 
     #[ORM\Column(nullable: true)]
-    #[Groups(['seven_by_nine:read', 'timer:read', 'session:read'])]
-    private ?\DateTimeImmutable $endsAt = null;
+    private ?DateTimeImmutable $endsAt = null;
 
     #[ORM\Column(enumType: TimerType::class)]
     #[Groups(['seven_by_nine:read', 'timer:read', 'session:read'])]
@@ -52,7 +53,7 @@ class Timer
     private ?int $position = null;
 
     #[ORM\Column]
-    private ?\DateTimeImmutable $createdAt = null;
+    private ?DateTimeImmutable $createdAt = null;
 
     /**
      * @var Collection<int, User>
@@ -72,14 +73,14 @@ class Timer
 
     public function __construct(TimerType $type, int $value, ?TimerStatus $status = null, ?int $position = null)
     {
-        $now = new \DateTimeImmutable();
+        $now = new DateTimeImmutable();
         $this->value = $value;
         $this->remainingAtPause = $value;
         $this->type = $type;
         $this->status = $status ?? TimerStatus::Running;
         $this->endsAt = $status === TimerStatus::Running ? $now->add(new \DateInterval("PT{$value}S")) : null;
         $this->position = $position;
-        $this->createdAt = new \DateTimeImmutable();
+        $this->createdAt = new DateTimeImmutable();
         $this->sevenByNines = new ArrayCollection();
         $this->attendants = new ArrayCollection();
         $this->sessions = new ArrayCollection();
@@ -87,13 +88,42 @@ class Timer
 
     public function getRemainingSeconds(): int
     {
-        $now = new \DateTimeImmutable();
+        $now = new DateTimeImmutable();
 
         return match ($this->status) {
             TimerStatus::Running => max(0, $this->endsAt->getTimestamp() - $now->getTimestamp()),
             TimerStatus::Paused => $this->remainingAtPause,
             default => 0,
         };
+    }
+
+    /**
+     * @throws DateMalformedStringException
+     */
+    public function start(): void
+    {
+        $now = new DateTimeImmutable();
+        $this->endsAt = $now->modify('+' . $this->remainingAtPause . ' seconds');
+        $this->status = TimerStatus::Running;
+    }
+
+    public function pause(): void
+    {
+        $now = new DateTimeImmutable();
+        $this->remainingAtPause = max(0, $this->endsAt->getTimestamp() - $now->getTimestamp());
+        $this->endsAt = null;
+        $this->status = TimerStatus::Paused;
+    }
+
+    #[Groups(['session:read', 'seven_by_nine:read'])]
+    #[SerializedName('endsAt')]
+    public function getFormattedEndsAt(): ?string
+    {
+        return !empty($this->endsAt) && $this->status === TimerStatus::Running
+            ? $this->getEndsAt()
+                ->setTimezone(new \DateTimeZone('Europe/Paris'))
+                ->format('Y-m-d H:i:s.u')
+            : null;
     }
 
     public function getId(): ?int
@@ -125,12 +155,12 @@ class Timer
         return $this;
     }
 
-    public function getEndsAt(): ?\DateTimeImmutable
+    public function getEndsAt(): ?DateTimeImmutable
     {
         return $this->endsAt;
     }
 
-    public function setEndsAt(?\DateTimeImmutable $endsAt): static
+    public function setEndsAt(?DateTimeImmutable $endsAt): static
     {
         $this->endsAt = $endsAt;
 
@@ -149,12 +179,12 @@ class Timer
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
+    public function getCreatedAt(): ?DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    public function setCreatedAt(DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
 
@@ -282,23 +312,5 @@ class Timer
         $this->session = $session;
 
         return $this;
-    }
-
-    /**
-     * @throws \DateMalformedStringException
-     */
-    public function start(): void
-    {
-        $now = new DateTimeImmutable();
-        $this->endsAt = $now->modify('+' . $this->remainingAtPause . ' seconds');
-        $this->status = TimerStatus::Running;
-    }
-
-    public function pause(): void
-    {
-        $now = new DateTimeImmutable();
-        $this->remainingAtPause = max(0, $this->endsAt->getTimestamp() - $now->getTimestamp());
-        $this->endsAt = null;
-        $this->status = TimerStatus::Paused;
     }
 }

@@ -2,64 +2,61 @@
 
 namespace App\Service;
 
+use App\Entity\Session;
 use App\Entity\SevenByNine;
-use App\Entity\Timer;
-use App\Enum\TimerStatus;
-use JsonException;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
+use Symfony\Component\Serializer\Exception\ExceptionInterface;
+use Symfony\Component\Serializer\SerializerInterface;
 
 final class Mercure
 {
-    public function __construct(private HubInterface $hub) {}
+    private const string SESSION_TOPIC = 'session';
+    private const string SEVEN_BY_NINE_TOPIC = 'seven-by-nine';
+
+    public function __construct(private HubInterface $hub, private SerializerInterface $serializer) {}
 
     /**
-     * @throws JsonException
+     * @throws ExceptionInterface
      */
-    public function sessionUpdated($session_id, Timer $timer): void
+    public function sessionUpdated(Session $session): void
     {
         $this->hub->publish(new Update(
-            "session/{$session_id}",
-            json_encode([
-                'id' => $session_id,
-                'currentTimer' => [
-                    'status' => $timer->getStatus()->value,
-                    'remainingSeconds' => $timer->getRemainingSeconds(),
-                    'remainingAtPause' => $timer->getRemainingAtPause(),
-                    'endsAt' => $timer->getStatus() === TimerStatus::Running
-                        ? $timer->getEndsAt()
-                            ->setTimezone(new \DateTimeZone('Europe/Paris'))
-                            ->format('Y-m-d H:i:s.u')
-                        : null,
-                ]
-            ], JSON_THROW_ON_ERROR),
+            $this::SESSION_TOPIC . "/{$session->getId()}",
+            $this->serializer->serialize($session, 'json', ['groups' => 'session:read']),
         ));
     }
 
     /**
-     * @throws JsonException
+     * @throws ExceptionInterface
      */
-    public function sevenByNineUpdated(SevenByNine $sevenByNine, Timer $timer): void
+    public function sessionJoined(Session $session): void
     {
         $this->hub->publish(new Update(
-            "seven-by-nine/{$sevenByNine->getId()}",
-            json_encode([
-                'id' => $sevenByNine->getId(),
-                'drawnValues' => $sevenByNine->getDrawnValues(),
-                'countTasks' => $sevenByNine->getCountTasks(),
-                'countPauses' => $sevenByNine->getCountPauses(),
-                'createdBy' => $sevenByNine->getCreatedBy(),
-                'currentTimer' => [
-                    'status' => $timer->getStatus()->value,
-                    'remainingSeconds' => $timer->getRemainingSeconds(),
-                    'remainingAtPause' => $timer->getRemainingAtPause(),
-                    'endsAt' => $timer->getStatus() === TimerStatus::Running
-                        ? $timer->getEndsAt()
-                            ->setTimezone(new \DateTimeZone('Europe/Paris'))
-                            ->format('Y-m-d H:i:s.u')
-                        : null,
-                ]
-            ], JSON_THROW_ON_ERROR),
+            $this::SESSION_TOPIC . "/{$session->getId()}",
+            $this->serializer->serialize($session, 'json', ['groups' => 'session:read']),
+        ));
+    }
+
+    /**
+     * @throws ExceptionInterface
+     */
+    public function sevenByNineUpdated(SevenByNine $sevenByNine): void
+    {
+        $this->hub->publish(new Update(
+            $this::SEVEN_BY_NINE_TOPIC . "/{$sevenByNine->getId()}",
+            $this->serializer->serialize($sevenByNine, 'json', ['groups' => 'seven_by_nine:read']),
+        ));
+    }
+
+    /**
+     * @throws ExceptionInterface
+     */
+    public function sevenByNineJoined(SevenByNine $seven_by_nine): void
+    {
+        $this->hub->publish(new Update(
+            $this::SEVEN_BY_NINE_TOPIC . "/{$seven_by_nine->getId()}",
+            $this->serializer->serialize($seven_by_nine, 'json', ['groups' => 'seven_by_nine:read']),
         ));
     }
 }

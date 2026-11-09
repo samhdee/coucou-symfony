@@ -9,7 +9,6 @@ use App\Enum\TimerStatus;
 use App\Enum\TimerType;
 use App\Service\Mercure;
 use DateMalformedStringException;
-use DateTimeImmutable;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
@@ -60,18 +59,22 @@ final class SevenByNineController extends AbstractController
 
     /**
      * Ajoute le timer suivant
+     * @param SevenByNineNextInput $input
      * @param SevenByNine $seven_by_nine
-     * @param UserInterface|null $user
+     * @param Mercure $mercure
      * @param EntityManagerInterface $em
      * @return JsonResponse
      * @throws JsonException
+     * @throws ORMException
+     * @throws OptimisticLockException
+     * @throws ExceptionInterface
      */
     #[Route('/seven-by-nine/{id}/next')]
     public function createNextTimer(
         #[MapRequestPayload] SevenByNineNextInput $input,
-        SevenByNine            $seven_by_nine,
-        Mercure                $mercure,
-        EntityManagerInterface $em,
+        SevenByNine                               $seven_by_nine,
+        Mercure                                   $mercure,
+        EntityManagerInterface                    $em,
     ): JsonResponse
     {
         if (
@@ -100,7 +103,7 @@ final class SevenByNineController extends AbstractController
         $em->persist($timer);
 
         // Envoie une notif
-        $mercure->sevenByNineUpdated($seven_by_nine, $timer);
+        $mercure->sevenByNineUpdated($seven_by_nine);
 
         try {
             // Met à jour le 7x9
@@ -173,6 +176,7 @@ final class SevenByNineController extends AbstractController
      * @param Mercure $mercure
      * @return JsonResponse
      * @throws JsonException
+     * @throws ExceptionInterface
      */
     #[Route('/seven-by-nine/{id}/pause', methods: ['PATCH'])]
     public function pause(SevenByNine $sevenByNine, EntityManagerInterface $em, Mercure $mercure): JsonResponse

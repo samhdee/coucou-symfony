@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Enum\TimerType;
 use App\Repository\SevenByNineRepository;
+use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 
@@ -27,9 +28,9 @@ class SevenByNine
     #[Groups(['seven_by_nine:read'])]
     private ?int $countPauses = null;
 
-    #[Groups(['seven_by_nine:read'])]
     #[ORM\ManyToOne(inversedBy: 'sevenByNines')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['seven_by_nine:read'])]
     private ?Timer $currentTimer = null;
 
     #[ORM\Column(enumType: TimerType::class)]
@@ -41,12 +42,10 @@ class SevenByNine
 
     // Numéro de séquence du timer courant (sert au verrouillage optimiste)
     #[ORM\Column]
-    #[Groups(['seven_by_nine:read'])]
     private int $sequence = 0;
 
     #[ORM\Version]
     #[ORM\Column(type: 'integer')]
-    #[Groups(['seven_by_nine:read'])]
     private int $version = 1;
 
     #[ORM\ManyToOne(inversedBy: 'sevenByNines')]
@@ -145,12 +144,12 @@ class SevenByNine
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
+    public function getCreatedAt(): ?DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    public function setCreatedAt(DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
 

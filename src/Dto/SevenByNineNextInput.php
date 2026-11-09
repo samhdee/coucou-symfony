@@ -14,7 +14,7 @@ final class SevenByNineNextInput
         #[Assert\Range(
             notInRangeMessage: 'La valeur doit être comprise entre {{ min }} et {{ max }}.',
             min: 1,
-            max: 7,
+            max: 13,
         )]
         public readonly int $fromPosition,
     ) { }
