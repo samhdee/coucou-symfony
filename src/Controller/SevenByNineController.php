@@ -5,8 +5,10 @@ namespace App\Controller;
 use App\Dto\SevenByNineNextInput;
 use App\Entity\SevenByNine;
 use App\Entity\Timer;
+use App\Entity\User;
 use App\Enum\TimerStatus;
 use App\Enum\TimerType;
+use App\Repository\SeanceAttendantRepository;
 use App\Service\Mercure;
 use DateMalformedStringException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -16,10 +18,14 @@ use Doctrine\ORM\OptimisticLockException;
 use JsonException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Component\Serializer\Exception\ExceptionInterface;
+use Symfony\Component\Uid\Uuid;
 
 final class SevenByNineController extends AbstractController
 {
@@ -48,12 +54,34 @@ final class SevenByNineController extends AbstractController
     }
 
     /**
+     * @param User|null $user
+     * @param EntityManagerInterface $em
+     * @param Mercure $mercure
      * @param SevenByNine $seven_by_nine
      * @return JsonResponse
+     * @throws ExceptionInterface
      */
     #[Route('/seven-by-nine/{id}')]
-    public function get(SevenByNine $seven_by_nine): JsonResponse
+    public function get(
+        #[CurrentUser] ?User $user,
+        EntityManagerInterface $em,
+        Mercure $mercure,
+        Request $request,
+        SeanceAttendantRepository $seanceAttendantRepository,
+        SevenByNine $seven_by_nine
+    ): JsonResponse
     {
+        if (!empty($user)) {
+            $seanceAttendantRepository->isUserAttendingSevenByNine($seven_by_nine, $user);
+            $em->flush();
+            $mercure->sevenByNineJoined($seven_by_nine);
+        } else {
+            $guest_id = $request->cookies->get('guest_id') ?? Uuid::v4()->toRfc4122();
+
+
+            $request->cookies->set('guest_id', $guest_id);
+        }
+
         return $this->json($seven_by_nine, context: ['groups' => 'seven_by_nine:read']);
     }
 
@@ -114,15 +142,7 @@ final class SevenByNineController extends AbstractController
                 $seven_by_nine->incrementTaskCount();
 
                 // Tire au sort le prochain numéro
-                $drawn_values = $seven_by_nine->getDrawnValues();
-                $new_draw = rand(1, SevenByNine::TIMER_TASK_MAX);
-
-                while (in_array($new_draw, $drawn_values)) {
-                    $new_draw = rand(1, SevenByNine::TIMER_TASK_MAX);
-                }
-
-                $drawn_values[] = $new_draw;
-                $seven_by_nine->setDrawnValues($drawn_values);
+                $seven_by_nine->drawNewValue();
             } else {
                 $seven_by_nine->incrementPauseCount();
             }
@@ -149,6 +169,7 @@ final class SevenByNineController extends AbstractController
      * @return JsonResponse
      * @throws JsonException
      * @throws DateMalformedStringException
+     * @throws ExceptionInterface
      */
     #[Route('/seven-by-nine/{id}/start')]
     public function start(SevenByNine $sevenByNine, EntityManagerInterface $em, Mercure $mercure): JsonResponse

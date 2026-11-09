@@ -27,6 +27,7 @@ use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Component\Serializer\Exception\ExceptionInterface;
 
 // #[Route('/session')]
 final class SessionController extends AbstractController
@@ -49,14 +50,11 @@ final class SessionController extends AbstractController
     {
         $timer = new Timer($input->type, $input->value, $input->status);
 
-        if (!empty($user)) {
-            $timer->setUser($user);
-        }
-
         $em->persist($timer);
         $em->flush();
 
         $session = new Session($timer);
+
         $em->persist($session);
         $em->flush();
 

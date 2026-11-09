@@ -37,11 +37,18 @@ class Session
     #[ORM\OneToMany(targetEntity: Timer::class, mappedBy: 'session')]
     private Collection $timers;
 
+    /**
+     * @var Collection<int, SeanceAttendant>
+     */
+    #[ORM\OneToMany(targetEntity: SeanceAttendant::class, mappedBy: 'session')]
+    private Collection $seanceAttendants;
+
     public function __construct(Timer $timer)
     {
         $this->currentTimer = $timer;
         $this->users = new ArrayCollection();
         $this->timers = new ArrayCollection();
+        $this->seanceAttendants = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -109,6 +116,36 @@ class Session
             // set the owning side to null (unless already changed)
             if ($timer->getSession() === $this) {
                 $timer->setSession(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, SeanceAttendant>
+     */
+    public function getSeanceAttendants(): Collection
+    {
+        return $this->seanceAttendants;
+    }
+
+    public function addSeanceAttendant(SeanceAttendant $seanceAttendant): static
+    {
+        if (!$this->seanceAttendants->contains($seanceAttendant)) {
+            $this->seanceAttendants->add($seanceAttendant);
+            $seanceAttendant->setSession($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSeanceAttendant(SeanceAttendant $seanceAttendant): static
+    {
+        if ($this->seanceAttendants->removeElement($seanceAttendant)) {
+            // set the owning side to null (unless already changed)
+            if ($seanceAttendant->getSession() === $this) {
+                $seanceAttendant->setSession(null);
             }
         }
 

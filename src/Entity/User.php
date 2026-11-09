@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 class User implements UserInterface
@@ -14,18 +15,21 @@ class User implements UserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['seven_by_nine:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
     private ?string $discordId = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['seven_by_nine:read'])]
     private ?string $username = null;
 
     #[ORM\Column(length: 255)]
     private ?string $email = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['seven_by_nine:read'])]
     private ?string $avatar = null;
 
     #[ORM\Column]
@@ -49,12 +53,26 @@ class User implements UserInterface
     #[ORM\ManyToMany(targetEntity: Session::class, mappedBy: 'users')]
     private Collection $sessions;
 
+    /**
+     * @var Collection<int, SevenByNine>
+     */
+    #[ORM\ManyToMany(targetEntity: SevenByNine::class, mappedBy: 'attendants')]
+    private Collection $attendedSevenByNines;
+
+    /**
+     * @var Collection<int, SeanceAttendant>
+     */
+    #[ORM\OneToMany(targetEntity: SeanceAttendant::class, mappedBy: 'user')]
+    private Collection $seanceAttendants;
+
     public function __construct()
     {
         $this->timers = new ArrayCollection();
         $this->sevenByNines = new ArrayCollection();
         $this->attendedTimers = new ArrayCollection();
         $this->sessions = new ArrayCollection();
+        $this->attendedSevenByNines = new ArrayCollection();
+        $this->seanceAttendants = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -239,6 +257,63 @@ class User implements UserInterface
     {
         if ($this->sessions->removeElement($session)) {
             $session->removeUser($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, SevenByNine>
+     */
+    public function getAttendedSevenByNines(): Collection
+    {
+        return $this->attendedSevenByNines;
+    }
+
+    public function addAttendedSevenByNine(SevenByNine $attendedSevenByNine): static
+    {
+        if (!$this->attendedSevenByNines->contains($attendedSevenByNine)) {
+            $this->attendedSevenByNines->add($attendedSevenByNine);
+            $attendedSevenByNine->addAttendant($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAttendedSevenByNine(SevenByNine $attendedSevenByNine): static
+    {
+        if ($this->attendedSevenByNines->removeElement($attendedSevenByNine)) {
+            $attendedSevenByNine->removeAttendant($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, SeanceAttendant>
+     */
+    public function getSeanceAttendants(): Collection
+    {
+        return $this->seanceAttendants;
+    }
+
+    public function addSeanceAttendant(SeanceAttendant $seanceAttendant): static
+    {
+        if (!$this->seanceAttendants->contains($seanceAttendant)) {
+            $this->seanceAttendants->add($seanceAttendant);
+            $seanceAttendant->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSeanceAttendant(SeanceAttendant $seanceAttendant): static
+    {
+        if ($this->seanceAttendants->removeElement($seanceAttendant)) {
+            // set the owning side to null (unless already changed)
+            if ($seanceAttendant->getUser() === $this) {
+                $seanceAttendant->setUser(null);
+            }
         }
 
         return $this;

@@ -5,6 +5,8 @@ namespace App\Entity;
 use App\Enum\TimerType;
 use App\Repository\SevenByNineRepository;
 use DateTimeImmutable;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 
@@ -49,10 +51,17 @@ class SevenByNine
     private int $version = 1;
 
     #[ORM\ManyToOne(inversedBy: 'sevenByNines')]
+    #[Groups(['seven_by_nine:read'])]
     private ?User $createdBy = null;
 
     #[ORM\Column]
-    private ?\DateTimeImmutable $createdAt = null;
+    private ?DateTimeImmutable $createdAt = null;
+
+    /**
+     * @var Collection<int, SeanceAttendant>
+     */
+    #[ORM\OneToMany(targetEntity: SeanceAttendant::class, mappedBy: 'sevenByNine')]
+    private Collection $seanceAttendants;
 
     public function __construct(Timer $timer, int $firstDraw, ?User $user)
     {
@@ -62,7 +71,8 @@ class SevenByNine
         $this->lastTimerType = TimerType::Task;
         $this->drawnValues = [$firstDraw];
         $this->createdBy = !empty($user) ? $user : null;
-        $this->createdAt = new \DateTimeImmutable();
+        $this->createdAt = new DateTimeImmutable();
+        $this->seanceAttendants = new ArrayCollection();
     }
 
     /**
@@ -89,6 +99,17 @@ class SevenByNine
 
         $this->countPauses += 1;
         return true;
+    }
+
+    public function drawNewValue(): void
+    {
+        $new_draw = rand(1, SevenByNine::TIMER_TASK_MAX);
+
+        while (in_array($new_draw, $this->drawnValues)) {
+            $new_draw = rand(1, SevenByNine::TIMER_TASK_MAX);
+        }
+
+        $this->drawnValues[] = $new_draw;
     }
 
     public function getId(): ?int
@@ -180,14 +201,32 @@ class SevenByNine
         return $this;
     }
 
-    public function getPreviousTimer(): ?Timer
+    /**
+     * @return Collection<int, SeanceAttendant>
+     */
+    public function getSeanceAttendants(): Collection
     {
-        return $this->previousTimer;
+        return $this->seanceAttendants;
     }
 
-    public function setPreviousTimer(?Timer $previousTimer): static
+    public function addSeanceAttendant(SeanceAttendant $seanceAttendant): static
     {
-        $this->previousTimer = $previousTimer;
+        if (!$this->seanceAttendants->contains($seanceAttendant)) {
+            $this->seanceAttendants->add($seanceAttendant);
+            $seanceAttendant->setSevenByNine($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSeanceAttendant(SeanceAttendant $seanceAttendant): static
+    {
+        if ($this->seanceAttendants->removeElement($seanceAttendant)) {
+            // set the owning side to null (unless already changed)
+            if ($seanceAttendant->getSevenByNine() === $this) {
+                $seanceAttendant->setSevenByNine(null);
+            }
+        }
 
         return $this;
     }
