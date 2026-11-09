@@ -128,7 +128,7 @@ final class SessionController extends AbstractController
             }
 
             // Envoie une notif
-            $mercure->sessionUpdated('session', $session->getId(), $timer);
+            $mercure->sessionUpdated($session->getId(), $timer);
 
             return $this->json($session, Response::HTTP_CREATED, context: ['groups' => 'session:read']);
         } catch (OptimisticLockException|UniqueConstraintViolationException) {
@@ -169,7 +169,7 @@ final class SessionController extends AbstractController
         $em->flush();
 
         // Envoie une notif
-        $mercure->sessionUpdated('session', $session->getId(), $timer);
+        $mercure->sessionUpdated($session->getId(), $timer);
 
         return $this->json($session, context: ['groups' => 'session:read']);
     }
@@ -199,7 +199,7 @@ final class SessionController extends AbstractController
         $em->flush();
 
         // Envoi d’une notif
-        $mercure->sessionUpdated('session', $session->getId(), $timer);
+        $mercure->sessionUpdated($session->getId(), $timer);
 
         return $this->json($session, context: ['groups' => 'session:read']);
     }

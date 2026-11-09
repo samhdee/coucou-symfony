@@ -16,10 +16,10 @@ final class Mercure
     /**
      * @throws JsonException
      */
-    public function sessionUpdated($type, $session_id, Timer $timer): void
+    public function sessionUpdated($session_id, Timer $timer): void
     {
         $this->hub->publish(new Update(
-            "{$type}/{$session_id}",
+            "session/{$session_id}",
             json_encode([
                 'id' => $session_id,
                 'currentTimer' => [
