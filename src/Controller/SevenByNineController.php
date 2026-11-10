@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Dto\SevenByNineNextInput;
+use App\Entity\SeanceAttendant;
 use App\Entity\SevenByNine;
 use App\Entity\Timer;
 use App\Entity\User;
@@ -21,6 +22,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\Mercure\Authorization;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -57,30 +59,55 @@ final class SevenByNineController extends AbstractController
      * @param User|null $user
      * @param EntityManagerInterface $em
      * @param Mercure $mercure
+     * @param Request $request
+     * @param SeanceAttendantRepository $seanceAttendantRepository
      * @param SevenByNine $seven_by_nine
      * @return JsonResponse
      * @throws ExceptionInterface
      */
     #[Route('/seven-by-nine/{id}')]
     public function get(
-        #[CurrentUser] ?User $user,
-        EntityManagerInterface $em,
-        Mercure $mercure,
-        Request $request,
+        #[CurrentUser] ?User      $user,
+        EntityManagerInterface    $em,
+        Mercure                   $mercure,
+        Request                   $request,
+        Authorization             $authorization,
         SeanceAttendantRepository $seanceAttendantRepository,
-        SevenByNine $seven_by_nine
+        SevenByNine               $seven_by_nine
     ): JsonResponse
     {
         if (!empty($user)) {
-            $seanceAttendantRepository->isUserAttendingSevenByNine($seven_by_nine, $user);
-            $em->flush();
+            $payload = ['userId' => $user->getId()];
+
+            if (!$seanceAttendantRepository->isUserAttendingSevenByNine($seven_by_nine, $user)) {
+                $seven_by_nine_attendance = new SeanceAttendant();
+                $seven_by_nine_attendance->setUser($user);
+                $seven_by_nine_attendance->setSevenByNine($seven_by_nine);
+                $em->persist($seven_by_nine_attendance);
+                $em->flush();
+            }
+
             $mercure->sevenByNineJoined($seven_by_nine);
         } else {
-            $guest_id = $request->cookies->get('guest_id') ?? Uuid::v4()->toRfc4122();
+            $guest_id = $request->attributes->get('guest_id');
+            $payload = ['guestId' => $request->attributes->get('guest_id')];
 
+            if (!$seanceAttendantRepository->isGuestAttendingSevenByNine($seven_by_nine, $guest_id)) {
+                $seven_by_nine_attendance = new SeanceAttendant();
+                $seven_by_nine_attendance->setSevenByNine($seven_by_nine);
+                $seven_by_nine_attendance->setGuestId($guest_id);
+                $em->persist($seven_by_nine_attendance);
+                $em->flush();
+            }
 
             $request->cookies->set('guest_id', $guest_id);
         }
+
+        $authorization->setCookie(
+            $request,
+            subscribe: ["seven-by-nine/{$seven_by_nine->getId()}"],
+            additionalClaims: ['payload' => $payload + ['seven-by-nine' => $seven_by_nine->getId()]],
+        );
 
         return $this->json($seven_by_nine, context: ['groups' => 'seven_by_nine:read']);
     }
@@ -135,7 +162,6 @@ final class SevenByNineController extends AbstractController
 
         try {
             // Met à jour le 7x9
-            $seven_by_nine->setPreviousTimer($seven_by_nine->getCurrentTimer());
             $seven_by_nine->setCurrentTimer($timer);
 
             if ($new_timer_type === TimerType::Task) {

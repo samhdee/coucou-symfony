@@ -2,7 +2,6 @@
 
 namespace App\Entity;
 
-use App\Enum\SeanceTypes;
 use App\Repository\SeanceAttendantRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
@@ -18,8 +17,8 @@ class SeanceAttendant
     #[ORM\ManyToOne(inversedBy: 'seanceAttendants')]
     private ?User $user = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?int $guestId = null;
+    #[ORM\Column(type: 'string', nullable: true)]
+    private ?string $guestId = null;
 
     #[ORM\Column]
     private ?DateTimeImmutable $joinedAt = null;
@@ -52,12 +51,12 @@ class SeanceAttendant
         return $this;
     }
 
-    public function getGuestId(): ?int
+    public function getGuestId(): ?string
     {
         return $this->guestId;
     }
 
-    public function setGuestId(?int $guestId): static
+    public function setGuestId(?string $guestId): static
     {
         $this->guestId = $guestId;
 

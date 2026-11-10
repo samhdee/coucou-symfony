@@ -19,7 +19,6 @@ class SeanceAttendantRepository extends ServiceEntityRepository
         parent::__construct($registry, SeanceAttendant::class);
     }
 
-    // SeanceAttendantRepository
     public function isUserAttendingSession(Session $session, User $user): bool
     {
         return (bool)$this->createQueryBuilder('a')
@@ -33,7 +32,19 @@ class SeanceAttendantRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
-    // SeanceAttendantRepository
+    public function isGuestAttendingSession(Session $session, $guest_id): bool
+    {
+        return (bool)$this->createQueryBuilder('a')
+            ->select('1')
+            ->where('a.session = :session')
+            ->setParameter('session', $session)
+            ->andWhere('a.guestId = :guest_id')
+            ->setParameter('guest_id', $guest_id)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     public function isUserAttendingSevenByNine(SevenByNine $seven_by_nine, User $user): bool
     {
         return (bool)$this->createQueryBuilder('a')
@@ -47,7 +58,24 @@ class SeanceAttendantRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
-    // src/Repository/SeanceAttendantRepository.php
+    public function isGuestAttendingSevenByNine(SevenByNine $seven_by_nine, $guest_id): bool
+    {
+        return (bool)$this->createQueryBuilder('a')
+            ->select('1')
+            ->where('a.sevenByNine = :seven_by_nine')
+            ->setParameter('seven_by_nine', $seven_by_nine)
+            ->andWhere('a.guestId = :guest_id')
+            ->setParameter('guest_id', $guest_id)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * @param string $guestId
+     * @param User $user
+     * @return void
+     */
     public function mergeGuestIntoUser(string $guestId, User $user): void
     {
         $em = $this->getEntityManager();
