@@ -27,7 +27,6 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
-use Symfony\Component\Uid\Uuid;
 
 final class SevenByNineController extends AbstractController
 {
@@ -60,6 +59,7 @@ final class SevenByNineController extends AbstractController
      * @param EntityManagerInterface $em
      * @param Mercure $mercure
      * @param Request $request
+     * @param Authorization $authorization
      * @param SeanceAttendantRepository $seanceAttendantRepository
      * @param SevenByNine $seven_by_nine
      * @return JsonResponse
@@ -77,8 +77,6 @@ final class SevenByNineController extends AbstractController
     ): JsonResponse
     {
         if (!empty($user)) {
-            $payload = ['userId' => $user->getId()];
-
             if (!$seanceAttendantRepository->isUserAttendingSevenByNine($seven_by_nine, $user)) {
                 $seven_by_nine_attendance = new SeanceAttendant();
                 $seven_by_nine_attendance->setUser($user);
@@ -90,7 +88,6 @@ final class SevenByNineController extends AbstractController
             $mercure->sevenByNineJoined($seven_by_nine);
         } else {
             $guest_id = $request->attributes->get('guest_id');
-            $payload = ['guestId' => $request->attributes->get('guest_id')];
 
             if (!$seanceAttendantRepository->isGuestAttendingSevenByNine($seven_by_nine, $guest_id)) {
                 $seven_by_nine_attendance = new SeanceAttendant();
@@ -103,12 +100,6 @@ final class SevenByNineController extends AbstractController
             $request->cookies->set('guest_id', $guest_id);
         }
 
-        $authorization->setCookie(
-            $request,
-            subscribe: ["seven-by-nine/{$seven_by_nine->getId()}"],
-            additionalClaims: ['payload' => $payload + ['seven-by-nine' => $seven_by_nine->getId()]],
-        );
-
         return $this->json($seven_by_nine, context: ['groups' => 'seven_by_nine:read']);
     }
 
@@ -119,7 +110,6 @@ final class SevenByNineController extends AbstractController
      * @param Mercure $mercure
      * @param EntityManagerInterface $em
      * @return JsonResponse
-     * @throws JsonException
      * @throws ORMException
      * @throws OptimisticLockException
      * @throws ExceptionInterface

@@ -17,9 +17,6 @@ class SeanceAttendant
     #[ORM\ManyToOne(inversedBy: 'seanceAttendants')]
     private ?User $user = null;
 
-    #[ORM\Column(type: 'string', nullable: true)]
-    private ?string $guestId = null;
-
     #[ORM\Column]
     private ?DateTimeImmutable $joinedAt = null;
 
@@ -28,6 +25,15 @@ class SeanceAttendant
 
     #[ORM\ManyToOne(inversedBy: 'seanceAttendants')]
     private ?SevenByNine $sevenByNine = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $hubSubscriberId = null;
+
+    #[ORM\Column(type: 'string', nullable: true)]
+    private ?string $guestId = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?DateTimeImmutable $leftAt = null;
 
     public function __construct()
     {
@@ -95,6 +101,30 @@ class SeanceAttendant
     public function setSevenByNine(?SevenByNine $sevenByNine): static
     {
         $this->sevenByNine = $sevenByNine;
+
+        return $this;
+    }
+
+    public function getHubSubscriberId(): ?string
+    {
+        return $this->hubSubscriberId;
+    }
+
+    public function setHubSubscriberId(?string $hubSubscriberId): static
+    {
+        $this->hubSubscriberId = $hubSubscriberId;
+
+        return $this;
+    }
+
+    public function getLeftAt(): ?DateTimeImmutable
+    {
+        return $this->leftAt;
+    }
+
+    public function setLeftAt(?DateTimeImmutable $leftAt): static
+    {
+        $this->leftAt = $leftAt;
 
         return $this;
     }

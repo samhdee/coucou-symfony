@@ -8,9 +8,10 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Mercure\HubInterface;
+use Symfony\Component\Mercure\Jwt\Grant;
 use Symfony\Component\Mercure\Update;
 
-#[AsCommand(name: 'app:mercure:test')]
+#[AsCommand(name: 'app:sandbox:test')]
 class SandboxCommand extends Command
 {
     public function __construct(private HubInterface $hub)
@@ -20,8 +21,7 @@ class SandboxCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $this->hub->publish(new Update('test', 'Hello Mercure'));
-        $output->writeln('Publié !');
+        $this->hub->publish(new Update('test', 'hello'));
         return Command::SUCCESS;
     }
 }

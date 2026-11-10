@@ -110,4 +110,50 @@ class SeanceAttendantRepository extends ServiceEntityRepository
                 ->execute();
         });
     }
+
+    public function countDistinctVisitors(string $type, int $id): int
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->select('COUNT(DISTINCT COALESCE(IDENTITY(p.user), p.guestId))')
+            ->andWhere('p.leftAt IS NULL');
+
+        match ($type) {
+            'seven-by-nine' => $qb->andWhere('p.sevenByNine = :id'),
+            'session' => $qb->andWhere('p.session = :id'),
+        };
+
+        return (int)$qb->setParameter('id', $id)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    public function findOpenByHubSubscriber(string $hubSubscriberId): ?SeanceAttendant
+    {
+        return $this->createQueryBuilder('a')
+            ->andWhere('a.hubSubscriberId = :sub')
+            ->andWhere('a.leftAt IS NULL')
+            ->setParameter('sub', $hubSubscriberId)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * Présences ouvertes dont le subscriber n'est PAS dans la liste donnée.
+     *
+     * @param string[] $liveSubscribers
+     * @return SeanceAttendant[]
+     */
+    public function findOpenExcept(array $liveSubscribers): array
+    {
+        $qb = $this->createQueryBuilder('a')
+            ->where('a.leftAt IS NULL');
+
+        if ($liveSubscribers !== []) {
+            $qb->andWhere('a.hubSubscriberId NOT IN (:live)')
+                ->setParameter('live', $liveSubscribers);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
 }
