@@ -4,12 +4,15 @@ namespace App\Controller;
 
 use App\Dto\SessionInput;
 use App\Dto\TimerInput;
+use App\Entity\SeanceAttendant;
 use App\Entity\Session;
 use App\Entity\Timer;
 use App\Entity\TimersPreset;
 use App\Entity\User;
+use App\Enum\SeanceType;
 use App\Enum\TimerPresetAdded;
 use App\Enum\TimerStatus;
+use App\Repository\SeanceAttendantRepository;
 use App\Repository\TimersPresetRepository;
 use App\Service\Mercure;
 use DateMalformedStringException;
@@ -21,6 +24,7 @@ use Doctrine\ORM\OptimisticLockException;
 use JsonException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Mercure\HubInterface;
@@ -201,5 +205,53 @@ final class SessionController extends AbstractController
         $mercure->sessionUpdated($session);
 
         return $this->json($session, context: ['groups' => 'session:read']);
+    }
+
+    /**
+     * @throws DateMalformedStringException
+     */
+    #[Route('/session/{id}/presence')]
+    public function presence(
+        #[CurrentUser] ?User      $user,
+        EntityManagerInterface    $em,
+        Request                   $request,
+        SeanceAttendantRepository $seanceAttendantRepository,
+        Session                   $session
+    ): JsonResponse
+    {
+        if (!empty($user)) {
+            if (!$seanceAttendantRepository->isUserAttendingSession($session, $user)) {
+                $session_attendance = new SeanceAttendant(user: $user, session: $session);
+                $em->persist($session_attendance);
+            } else {
+                $seance_attendant = $seanceAttendantRepository->findOneBy([
+                    'session' => $session,
+                    'user' => $user,
+                ]);
+                $seance_attendant->moveBackLeftAt();
+            }
+
+        } else {
+            $guest_id = $request->attributes->get('guest_id');
+
+            if (!$seanceAttendantRepository->isGuestAttendingSession($session, $guest_id)) {
+                $session_attendance = new SeanceAttendant(guestId: $guest_id, session: $session);
+                $em->persist($session_attendance);
+            } else {
+                $seance_attendant = $seanceAttendantRepository->findOneBy([
+                    'sevenByNine' => $session,
+                    'guestId' => $guest_id,
+                ]);
+                $seance_attendant->moveBackLeftAt();
+            }
+
+        }
+
+        $em->flush();
+
+        return $this->json(
+            $seanceAttendantRepository->getSeanceAttendants(SeanceType::Session, $session),
+            context: ['groups' => 'seance_attendance:read']
+        );
     }
 }

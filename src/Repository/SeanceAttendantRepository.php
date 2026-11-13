@@ -147,6 +147,22 @@ class SeanceAttendantRepository extends ServiceEntityRepository
                 ->setParameter('now', new DateTimeImmutable());
 
             return $qb->getQuery()->getResult();
+        } elseif ($type === SeanceType::Session) {
+            $qb = $this->createQueryBuilder('sa')
+                ->leftJoin('sa.user', 'u')
+                ->addSelect('u')
+                ->where('sa.session = :session')
+                ->setParameter('session', $seance);
+
+            $qb->andWhere(
+                    $qb->expr()->orX(
+                        'sa.leftAt IS NULL',
+                        'sa.leftAt > :now'
+                    )
+                )
+                ->setParameter('now', new DateTimeImmutable());
+
+            return $qb->getQuery()->getResult();
         }
     }
 }

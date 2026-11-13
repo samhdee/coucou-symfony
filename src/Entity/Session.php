@@ -19,13 +19,6 @@ class Session
     #[Groups(['session:read'])]
     private ?int $id = null;
 
-    /**
-     * @var Collection<int, User>
-     */
-    #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'sessions')]
-    #[Groups(['session:read'])]
-    private Collection $users;
-
     #[ORM\ManyToOne(inversedBy: 'sessions')]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups(['session:read'])]
