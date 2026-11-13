@@ -6,6 +6,8 @@ use App\Entity\SeanceAttendant;
 use App\Entity\Session;
 use App\Entity\SevenByNine;
 use App\Entity\User;
+use App\Enum\SeanceType;
+use DateTimeImmutable;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -127,33 +129,24 @@ class SeanceAttendantRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
     }
 
-    public function findOpenByHubSubscriber(string $hubSubscriberId): ?SeanceAttendant
+    public function getSeanceAttendants(SeanceType $type, SevenByNine|Session $seance)
     {
-        return $this->createQueryBuilder('a')
-            ->andWhere('a.hubSubscriberId = :sub')
-            ->andWhere('a.leftAt IS NULL')
-            ->setParameter('sub', $hubSubscriberId)
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
-    }
+        if ($type === SeanceType::SevenByNine) {
+            $qb = $this->createQueryBuilder('sa')
+                ->leftJoin('sa.user', 'u')
+                ->addSelect('u')
+                ->where('sa.sevenByNine = :seven_by_nine')
+                ->setParameter('seven_by_nine', $seance);
 
-    /**
-     * Présences ouvertes dont le subscriber n'est PAS dans la liste donnée.
-     *
-     * @param string[] $liveSubscribers
-     * @return SeanceAttendant[]
-     */
-    public function findOpenExcept(array $liveSubscribers): array
-    {
-        $qb = $this->createQueryBuilder('a')
-            ->where('a.leftAt IS NULL');
+            $qb->andWhere(
+                    $qb->expr()->orX(
+                        'sa.leftAt IS NULL',
+                        'sa.leftAt > :now'
+                    )
+                )
+                ->setParameter('now', new DateTimeImmutable());
 
-        if ($liveSubscribers !== []) {
-            $qb->andWhere('a.hubSubscriberId NOT IN (:live)')
-                ->setParameter('live', $liveSubscribers);
+            return $qb->getQuery()->getResult();
         }
-
-        return $qb->getQuery()->getResult();
     }
 }

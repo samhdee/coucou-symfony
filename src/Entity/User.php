@@ -15,49 +15,26 @@ class User implements UserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['seven_by_nine:read'])]
+    #[Groups(['seance_attendance:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['seance_attendance:read'])]
     private ?string $discordId = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['seven_by_nine:read'])]
+    #[Groups(['seance_attendance:read'])]
     private ?string $username = null;
 
     #[ORM\Column(length: 255)]
     private ?string $email = null;
 
     #[ORM\Column(length: 255, nullable: true)]
-    #[Groups(['seven_by_nine:read'])]
+    #[Groups(['seance_attendance:read'])]
     private ?string $avatar = null;
 
     #[ORM\Column]
     private array $roles = [];
-
-    /**
-     * @var Collection<int, SevenByNine>
-     */
-    #[ORM\OneToMany(targetEntity: SevenByNine::class, mappedBy: 'createdBy')]
-    private Collection $sevenByNines;
-
-    /**
-     * @var Collection<int, Timer>
-     */
-    #[ORM\ManyToMany(targetEntity: Timer::class, inversedBy: 'attendants')]
-    private Collection $attendedTimers;
-
-    /**
-     * @var Collection<int, Session>
-     */
-    #[ORM\ManyToMany(targetEntity: Session::class, mappedBy: 'users')]
-    private Collection $sessions;
-
-    /**
-     * @var Collection<int, SevenByNine>
-     */
-    #[ORM\ManyToMany(targetEntity: SevenByNine::class, mappedBy: 'attendants')]
-    private Collection $attendedSevenByNines;
 
     /**
      * @var Collection<int, SeanceAttendant>
@@ -67,11 +44,6 @@ class User implements UserInterface
 
     public function __construct()
     {
-        $this->timers = new ArrayCollection();
-        $this->sevenByNines = new ArrayCollection();
-        $this->attendedTimers = new ArrayCollection();
-        $this->sessions = new ArrayCollection();
-        $this->attendedSevenByNines = new ArrayCollection();
         $this->seanceAttendants = new ArrayCollection();
     }
 
@@ -149,144 +121,6 @@ class User implements UserInterface
     public function eraseCredentials(): void
     {
         // Rien à effacer : pas de mot de passe stocké
-    }
-
-    /**
-     * @return Collection<int, Timer>
-     */
-    public function getTimers(): Collection
-    {
-        return $this->timers;
-    }
-
-    public function addTimer(Timer $timer): static
-    {
-        if (!$this->timers->contains($timer)) {
-            $this->timers->add($timer);
-            $timer->setUser($this);
-        }
-
-        return $this;
-    }
-
-    public function removeTimer(Timer $timer): static
-    {
-        if ($this->timers->removeElement($timer)) {
-            // set the owning side to null (unless already changed)
-            if ($timer->getUser() === $this) {
-                $timer->setUser(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, SevenByNine>
-     */
-    public function getSevenByNines(): Collection
-    {
-        return $this->sevenByNines;
-    }
-
-    public function addSevenByNine(SevenByNine $sevenByNine): static
-    {
-        if (!$this->sevenByNines->contains($sevenByNine)) {
-            $this->sevenByNines->add($sevenByNine);
-            $sevenByNine->setCreatedBy($this);
-        }
-
-        return $this;
-    }
-
-    public function removeSevenByNine(SevenByNine $sevenByNine): static
-    {
-        if ($this->sevenByNines->removeElement($sevenByNine)) {
-            // set the owning side to null (unless already changed)
-            if ($sevenByNine->getCreatedBy() === $this) {
-                $sevenByNine->setCreatedBy(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Timer>
-     */
-    public function getAttendedTimers(): Collection
-    {
-        return $this->attendedTimers;
-    }
-
-    public function addAttendedTimer(Timer $attendedTimer): static
-    {
-        if (!$this->attendedTimers->contains($attendedTimer)) {
-            $this->attendedTimers->add($attendedTimer);
-        }
-
-        return $this;
-    }
-
-    public function removeAttendedTimer(Timer $attendedTimer): static
-    {
-        $this->attendedTimers->removeElement($attendedTimer);
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Session>
-     */
-    public function getSessions(): Collection
-    {
-        return $this->sessions;
-    }
-
-    public function addSession(Session $session): static
-    {
-        if (!$this->sessions->contains($session)) {
-            $this->sessions->add($session);
-            $session->addUser($this);
-        }
-
-        return $this;
-    }
-
-    public function removeSession(Session $session): static
-    {
-        if ($this->sessions->removeElement($session)) {
-            $session->removeUser($this);
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, SevenByNine>
-     */
-    public function getAttendedSevenByNines(): Collection
-    {
-        return $this->attendedSevenByNines;
-    }
-
-    public function addAttendedSevenByNine(SevenByNine $attendedSevenByNine): static
-    {
-        if (!$this->attendedSevenByNines->contains($attendedSevenByNine)) {
-            $this->attendedSevenByNines->add($attendedSevenByNine);
-            $attendedSevenByNine->addAttendant($this);
-        }
-
-        return $this;
-    }
-
-    public function removeAttendedSevenByNine(SevenByNine $attendedSevenByNine): static
-    {
-        if ($this->attendedSevenByNines->removeElement($attendedSevenByNine)) {
-            $attendedSevenByNine->removeAttendant($this);
-        }
-
-        return $this;
     }
 
     /**

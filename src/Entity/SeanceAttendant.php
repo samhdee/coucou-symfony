@@ -3,22 +3,28 @@
 namespace App\Entity;
 
 use App\Repository\SeanceAttendantRepository;
+use DateMalformedStringException;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: SeanceAttendantRepository::class)]
 class SeanceAttendant
 {
+    private const int LEFT_AT_FUTURE = 35;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'seanceAttendants')]
+    #[Groups(['seance_attendance:read'])]
     private ?User $user = null;
 
-    #[ORM\Column]
-    private ?DateTimeImmutable $joinedAt = null;
+    #[ORM\Column(type: 'string', nullable: true)]
+    #[Groups(['seance_attendance:read'])]
+    private ?string $guestId = null;
 
     #[ORM\ManyToOne(inversedBy: 'seanceAttendants')]
     private ?Session $session = null;
@@ -26,18 +32,38 @@ class SeanceAttendant
     #[ORM\ManyToOne(inversedBy: 'seanceAttendants')]
     private ?SevenByNine $sevenByNine = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $hubSubscriberId = null;
-
-    #[ORM\Column(type: 'string', nullable: true)]
-    private ?string $guestId = null;
+    #[ORM\Column]
+    private ?DateTimeImmutable $joinedAt = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['seance_attendance:read'])]
     private ?DateTimeImmutable $leftAt = null;
 
-    public function __construct()
+    /**
+     * @throws DateMalformedStringException
+     */
+    public function __construct(
+        ?User $user = null,
+        ?string $guestId = null,
+        ?Session $session = null,
+        ?SevenByNine $sevenByNine = null,
+    )
     {
-        $this->joinedAt = new DateTimeImmutable();
+        $now = new DateTimeImmutable();
+        $this->joinedAt = $now;
+        $this->leftAt = $now->modify('+' . self::LEFT_AT_FUTURE . ' seconds');
+        $this->user = $user;
+        $this->guestId = $guestId;
+        $this->session = $session;
+        $this->sevenByNine = $sevenByNine;
+    }
+
+    /**
+     * @throws DateMalformedStringException
+     */
+    public function moveBackLeftAt(): void
+    {
+        $this->leftAt = new DateTimeImmutable()->modify('+' . self::LEFT_AT_FUTURE . ' seconds');
     }
 
     public function getId(): ?int
@@ -101,18 +127,6 @@ class SeanceAttendant
     public function setSevenByNine(?SevenByNine $sevenByNine): static
     {
         $this->sevenByNine = $sevenByNine;
-
-        return $this;
-    }
-
-    public function getHubSubscriberId(): ?string
-    {
-        return $this->hubSubscriberId;
-    }
-
-    public function setHubSubscriberId(?string $hubSubscriberId): static
-    {
-        $this->hubSubscriberId = $hubSubscriberId;
 
         return $this;
     }

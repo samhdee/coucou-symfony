@@ -56,13 +56,6 @@ class Timer
     private ?DateTimeImmutable $createdAt = null;
 
     /**
-     * @var Collection<int, User>
-     */
-    #[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'attendedTimers')]
-    #[Groups(['seven_by_nine:read', 'timer:read', 'session:read'])]
-    private Collection $attendants;
-
-    /**
      * @var Collection<int, Session>
      */
     #[ORM\OneToMany(targetEntity: Session::class, mappedBy: 'currentTimer')]
@@ -82,7 +75,6 @@ class Timer
         $this->position = $position;
         $this->createdAt = new DateTimeImmutable();
         $this->sevenByNines = new ArrayCollection();
-        $this->attendants = new ArrayCollection();
         $this->sessions = new ArrayCollection();
     }
 
@@ -241,33 +233,6 @@ class Timer
     public function setPosition(?int $position): static
     {
         $this->position = $position;
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, User>
-     */
-    public function getAttendants(): Collection
-    {
-        return $this->attendants;
-    }
-
-    public function addAttendant(User $attendant): static
-    {
-        if (!$this->attendants->contains($attendant)) {
-            $this->attendants->add($attendant);
-            $attendant->addAttendedTimer($this);
-        }
-
-        return $this;
-    }
-
-    public function removeAttendant(User $attendant): static
-    {
-        if ($this->attendants->removeElement($attendant)) {
-            $attendant->removeAttendedTimer($this);
-        }
 
         return $this;
     }

@@ -7,6 +7,7 @@ use App\Entity\SeanceAttendant;
 use App\Entity\SevenByNine;
 use App\Entity\Timer;
 use App\Entity\User;
+use App\Enum\SeanceType;
 use App\Enum\TimerStatus;
 use App\Enum\TimerType;
 use App\Repository\SeanceAttendantRepository;
@@ -69,37 +70,11 @@ final class SevenByNineController extends AbstractController
     public function get(
         #[CurrentUser] ?User      $user,
         EntityManagerInterface    $em,
-        Mercure                   $mercure,
         Request                   $request,
-        Authorization             $authorization,
         SeanceAttendantRepository $seanceAttendantRepository,
         SevenByNine               $seven_by_nine
     ): JsonResponse
     {
-        if (!empty($user)) {
-            if (!$seanceAttendantRepository->isUserAttendingSevenByNine($seven_by_nine, $user)) {
-                $seven_by_nine_attendance = new SeanceAttendant();
-                $seven_by_nine_attendance->setUser($user);
-                $seven_by_nine_attendance->setSevenByNine($seven_by_nine);
-                $em->persist($seven_by_nine_attendance);
-                $em->flush();
-            }
-
-            $mercure->sevenByNineJoined($seven_by_nine);
-        } else {
-            $guest_id = $request->attributes->get('guest_id');
-
-            if (!$seanceAttendantRepository->isGuestAttendingSevenByNine($seven_by_nine, $guest_id)) {
-                $seven_by_nine_attendance = new SeanceAttendant();
-                $seven_by_nine_attendance->setSevenByNine($seven_by_nine);
-                $seven_by_nine_attendance->setGuestId($guest_id);
-                $em->persist($seven_by_nine_attendance);
-                $em->flush();
-            }
-
-            $request->cookies->set('guest_id', $guest_id);
-        }
-
         return $this->json($seven_by_nine, context: ['groups' => 'seven_by_nine:read']);
     }
 
@@ -232,5 +207,53 @@ final class SevenByNineController extends AbstractController
         $mercure->sevenByNineUpdated($sevenByNine, $timer);
 
         return $this->json($sevenByNine, context: ['groups' => 'seven_by_nine:read']);
+    }
+
+    /**
+     * @throws DateMalformedStringException
+     */
+    #[Route('/seven-by-nine/{id}/presence')]
+    public function presence(
+        #[CurrentUser] ?User      $user,
+        EntityManagerInterface    $em,
+        Request                   $request,
+        SeanceAttendantRepository $seanceAttendantRepository,
+        SevenByNine               $seven_by_nine
+    ): JsonResponse
+    {
+        if (!empty($user)) {
+            if (!$seanceAttendantRepository->isUserAttendingSevenByNine($seven_by_nine, $user)) {
+                $seven_by_nine_attendance = new SeanceAttendant(user: $user, sevenByNine: $seven_by_nine);
+                $em->persist($seven_by_nine_attendance);
+            } else {
+                $seance_attendant = $seanceAttendantRepository->findOneBy([
+                    'sevenByNine' => $seven_by_nine,
+                    'user' => $user,
+                ]);
+                $seance_attendant->moveBackLeftAt();
+            }
+
+        } else {
+            $guest_id = $request->attributes->get('guest_id');
+
+            if (!$seanceAttendantRepository->isGuestAttendingSevenByNine($seven_by_nine, $guest_id)) {
+                $seven_by_nine_attendance = new SeanceAttendant(guestId: $guest_id, sevenByNine: $seven_by_nine);
+                $em->persist($seven_by_nine_attendance);
+            } else {
+                $seance_attendant = $seanceAttendantRepository->findOneBy([
+                    'sevenByNine' => $seven_by_nine,
+                    'guestId' => $guest_id,
+                ]);
+                $seance_attendant->moveBackLeftAt();
+            }
+
+        }
+
+        $em->flush();
+
+        return $this->json(
+            $seanceAttendantRepository->getSeanceAttendants(SeanceType::SevenByNine, $seven_by_nine),
+            context: ['groups' => 'seance_attendance:read']
+        );
     }
 }
